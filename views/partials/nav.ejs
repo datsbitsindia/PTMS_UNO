@@ -29,8 +29,8 @@
         <% } %>
 
         <% if (user.role === 'admin') { %>
-            <a href="/managers" class="<%= page === 'managers' ? 'active' : '' %>">
-                <i class="fa-solid fa-user-tie"></i>Managers
+            <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
+                <i class="fa-solid fa-users"></i>Employees
             </a>
             <a href="/activity" class="<%= page === 'activity' ? 'active' : '' %>">
                 <i class="fa-solid fa-clock-rotate-left"></i>Activity Log
@@ -62,7 +62,7 @@
         </div>
 
         <div class="topbar-right-group" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-            <% if (page === 'tasks' && user.role === 'manager') { %>
+            <% if (page === 'tasks' && (user.role === 'manager' || user.role === 'admin')) { %>
                 <button class="btn primary btn-sm" data-open="task-modal" style="white-space:nowrap;">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -71,12 +71,6 @@
             <% if (page === 'employees') { %>
                 <button class="btn primary btn-sm" data-open="employee-modal" style="white-space:nowrap;">
                     <i class="fa-solid fa-user-plus"></i> Add Employee
-                </button>
-            <% } %>
-
-            <% if (page === 'managers' && user.role === 'admin') { %>
-                <button class="btn primary btn-sm" data-open="manager-modal" style="white-space:nowrap;">
-                    <i class="fa-solid fa-user-plus"></i> Add Manager
                 </button>
             <% } %>
 
