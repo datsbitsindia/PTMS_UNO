@@ -46,11 +46,15 @@
         </form>
 
         <div class="demo">
-            <b>Demo accounts</b>
-            <span>Admin: chetan@gmail.com / chetan</span>
-            <span>Manager: bhavin@gmail.com / bhavin</span>
-            <span>Employee: chintan@gmail.com / chintan</span>
-            <span>Employee: jemini@gmail.com / jemini</span>
+            <b>Active System Accounts</b>
+            <% (typeof demoAccounts !== 'undefined' ? demoAccounts : []).forEach(acc => { %>
+                <span onclick="document.querySelector('input[name=email]').value='<%= acc.email %>'" style="cursor:pointer;" title="Click to fill email">
+                    <b><%= acc.role.toUpperCase() %>:</b> <%= acc.email %> (<%= acc.name %>)
+                </span>
+            <% }) %>
+            <% if (typeof demoAccounts === 'undefined' || !demoAccounts.length) { %>
+                <span>Admin: admin@gmail.com</span>
+            <% } %>
         </div>
     </div>
 
