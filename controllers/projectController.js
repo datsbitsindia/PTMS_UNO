@@ -7,8 +7,8 @@ exports.list = async (req, res) => {
     const u = req.session.user;
     const statusOrderSql = "ORDER BY CASE LOWER(p.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, p.created_at DESC";
     
-    let whereConditions = u.role === 'admin' ? [] : ['p.manager_id=?'];
-    let params = u.role === 'admin' ? [] : [u.id];
+    let whereConditions = [];
+    let params = [];
 
     if (req.query.status) {
         const st = req.query.status.toLowerCase().trim();
@@ -21,8 +21,8 @@ exports.list = async (req, res) => {
     }
 
     const whereClause = whereConditions.length ? 'WHERE ' + whereConditions.join(' AND ') : '';
-    const projects = await db.prepare(`SELECT p.*,m.name manager_name,(SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count,CASE WHEN p.end_date<CURDATE() AND p.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p JOIN users m ON m.id=p.manager_id ${whereClause} ${statusOrderSql}`).all(...params);
-    const managers = u.role === 'admin' ? await db.prepare("SELECT id,name FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
+    const projects = await db.prepare(`SELECT p.*,COALESCE(m.name, 'Admin') manager_name,(SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count,CASE WHEN p.end_date<CURDATE() AND p.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p LEFT JOIN users m ON m.id=p.manager_id ${whereClause} ${statusOrderSql}`).all(...params);
+    const managers = await db.prepare("SELECT id,name FROM users WHERE active=1 ORDER BY name").all();
     res.render('projects', {
         projects,
         managers
@@ -37,43 +37,35 @@ exports.save = async (req, res) => {
         end_date,
         manager_id
     } = req.body;
-    if (!name || !manager_id) return res.status(400).render('error', {
-        message: 'Project name and manager are required'
+    if (!name) return res.status(400).render('error', {
+        message: 'Project name is required'
     });
-    const manager = await db.prepare("SELECT id FROM users WHERE id=? AND role='manager' AND active=1").get(manager_id);
-    if (!manager) return res.status(400).render('error', {
-        message: 'Please select a valid manager'
-    });
+    const mgrId = manager_id ? Number(manager_id) : req.session.user.id;
 
     if (id) {
         const existing = await db.prepare('SELECT * FROM projects WHERE id=?').get(id);
         if (!existing) return res.status(404).render('error', { message: 'Project not found' });
 
         await db.prepare('UPDATE projects SET name=?,description=?,start_date=?,end_date=?,manager_id=? WHERE id=?').run(
-            name, description, start_date || null, end_date || null, manager_id, id
+            name, description, start_date || null, end_date || null, mgrId, id
         );
         await activity.log(req.session.user.id, 'Project Updated', name);
-        await notifications.notify(manager_id, `Project Updated: ${req.session.user.name} has updated project details for '${name}'`, `/projects/${id}`);
-        if (existing.manager_id !== Number(manager_id)) {
-            await notifications.notify(existing.manager_id, `Project Re-assigned: Project '${name}' has been re-assigned to another manager.`, `/projects`);
-        }
         res.redirect(`/projects/${id}`);
     } else {
-        const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,created_by,manager_id) VALUES(?,?,?,?,?,?)').run(name, description, start_date || null, end_date || null, req.session.user.id, manager_id);
-        await activity.log(req.session.user.id, 'Project Assigned', name);
-        await notifications.notify(manager_id, `New project assigned: ${name}`, `/projects/${result.lastInsertRowid}`);
+        const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,status,created_by,manager_id) VALUES(?,?,?,?,?,?,?)').run(name, description, start_date || null, end_date || null, 'In Progress', req.session.user.id, mgrId);
+        await activity.log(req.session.user.id, 'Project Created', name);
         res.redirect('/projects');
     }
 };
 exports.detail = async (req, res) => {
     const u = req.session.user;
-    const project = await db.prepare('SELECT p.*,m.name manager_name,c.name creator_name FROM projects p JOIN users m ON m.id=p.manager_id JOIN users c ON c.id=p.created_by WHERE p.id=?').get(req.params.id);
-    if (!project || (u.role === 'manager' && project.manager_id !== u.id) || u.role === 'employee') return res.status(404).render('error', {
+    const project = await db.prepare('SELECT p.*,COALESCE(m.name, c.name) manager_name,c.name creator_name FROM projects p LEFT JOIN users m ON m.id=p.manager_id JOIN users c ON c.id=p.created_by WHERE p.id=?').get(req.params.id);
+    if (!project) return res.status(404).render('error', {
         message: 'Project not found'
     });
     const tasks = await db.prepare("SELECT t.*,u.name employee_name FROM tasks t JOIN users u ON u.id=t.assigned_to WHERE t.project_id=? ORDER BY CASE LOWER(t.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(project.id);
     const updates = await db.prepare('SELECT x.*,u.name manager_name FROM project_updates x JOIN users u ON u.id=x.manager_id WHERE x.project_id=? ORDER BY x.created_at DESC').all(project.id);
-    const managers = u.role === 'admin' ? await db.prepare("SELECT id,name FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
+    const managers = await db.prepare("SELECT id,name FROM users WHERE active=1 ORDER BY name").all();
     res.render('project-detail', {
         project,
         tasks,

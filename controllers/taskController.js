@@ -17,7 +17,6 @@ const canView = async (u, t) => {
 };
 exports.list = async (req, res) => {
     const u = req.session.user;
-    if (u.role === 'admin') return res.redirect('/projects');
     
     // Auto sync daily routine tasks for today
     await routineService.syncDailyRoutines();
@@ -26,11 +25,8 @@ exports.list = async (req, res) => {
     let params = [];
 
     if (u.role === 'employee') {
-        baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-        params = [u.id, u.id, u.id];
-    } else if (u.role === 'manager') {
-        baseFilter = '(p.manager_id=? OR t.created_by=? OR t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-        params = [u.id, u.id, u.id, u.id, u.id];
+        baseFilter = '(t.assigned_to=? OR t.created_by=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        params = [u.id, u.id, u.id, u.id];
     }
 
     const filters = [baseFilter];
@@ -61,9 +57,9 @@ exports.list = async (req, res) => {
     }
 
     const tasks = await db.prepare(query + " WHERE " + filters.join(' AND ') + " ORDER BY CASE LOWER(t.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
-    const employees = u.role === 'manager' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all() : [];
-    const managers = u.role === 'manager' || u.role === 'admin' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
-    const projects = u.role === 'manager' ? await db.prepare("SELECT id,name FROM projects WHERE manager_id=? AND status NOT IN ('Completed','Cancelled') ORDER BY name").all(u.id) : [];
+    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
+    const managers = [];
+    const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') ORDER BY name").all();
     
     let dailyRoutines = [];
     if (u.role === 'manager') {
