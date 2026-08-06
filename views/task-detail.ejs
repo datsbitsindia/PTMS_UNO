@@ -20,13 +20,13 @@
                     <i class="fa-solid fa-share"></i> Forwarded
                 </span>
             <% } %>
-            <% if (task.assigned_to === user.id || task.created_by === user.id || user.role === 'admin') { %>
+            <% if (user.role !== 'admin' && (task.assigned_to === user.id || task.created_by === user.id)) { %>
                 <button type="button" class="task-action-pill forward-pill" style="background:#d3e3fd;color:#0b2d68;border-color:#bae0fd;" data-open="forward-task-modal">
                     <i class="fa-solid fa-share"></i> Re-assign / Forward Task
                 </button>
             <% } %>
 
-            <% if (task.created_by === user.id || user.role === 'admin' || task.manager_id === user.id) { %>
+            <% if (user.role !== 'admin' && task.created_by === user.id) { %>
                 <button type="button" class="task-action-pill edit-pill" data-open="edit-task-modal">
                     <i class="fa-solid fa-pen"></i> Edit Task
                 </button>
