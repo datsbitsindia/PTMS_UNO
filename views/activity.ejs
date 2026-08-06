@@ -1,0 +1,79 @@
+<%- include('partials/head',{title:'Activity Log'}) %>
+<%- include('partials/nav',{page:'activity'}) %>
+
+<% 
+  const todayStr = formatDate(new Date());
+  const todayCount = activities.filter(a => formatDate(a.created_at) === todayStr).length;
+  const users = new Set(activities.map(a => a.user_id).filter(Boolean)).size;
+  const actionTypes = [...new Set(activities.map(a => a.action).filter(Boolean))];
+%>
+
+<div class="metric-grid employee-kpis four">
+    <div class="metric-card purple" onclick="filterByKpi('all', event)" title="Click to show all">
+        <i class="fa-solid fa-users"></i>
+        <b><%= users %></b>
+        <span>Users Recorded</span>
+    </div>
+    <div class="metric-card green" onclick="filterByKpi('<%= todayStr %>', event)" title="Click to filter Today's Logs">
+        <i class="fa-solid fa-receipt"></i>
+        <b><%= todayCount %></b>
+        <span>Today's Logs</span>
+    </div>
+    <div class="metric-card orange" onclick="filterByKpi('all', event)" title="Click to show all">
+        <i class="fa-solid fa-tower-broadcast"></i>
+        <b><%= activities.length %></b>
+        <span>Total Actions</span>
+    </div>
+    <div class="metric-card red" onclick="filterByKpi('all', event)" title="Click to reset filter">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <b>0</b>
+        <span>Alerts</span>
+    </div>
+</div>
+
+<div class="toolbar-ui compact-filter">
+    <input type="search" placeholder="Search by user or action...">
+    <select>
+        <option>All Roles</option>
+        <option>Admin</option>
+        <option>Manager</option>
+        <option>Employee</option>
+    </select>
+    <select>
+        <option>All Actions</option>
+        <% actionTypes.forEach(act=>{ %>
+            <option><%= act %></option>
+        <% }) %>
+    </select>
+    <button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button>
+</div>
+
+<section class="ui-panel">
+    <div class="ui-panel-head">
+        <h2>Latest Activity</h2>
+    </div>
+    <div class="activity-timeline">
+        <% activities.forEach(a=>{ %>
+            <article class="activity-row" data-role="<%= a.role||'System' %>" data-action="<%= a.action %>" data-date="<%= formatDate(a.created_at) %>">
+                <div class="activity-time">
+                    <b><%= new Date(a.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) %></b>
+                    <small><%= formatDate(a.created_at) %></small>
+                </div>
+                <div class="activity-person">
+                    <b><%= a.name||'System' %></b>
+                    <small><%= a.email||'' %></small>
+                    <span class="role-chip"><%= a.role||'System' %></span>
+                </div>
+                <div class="activity-action">
+                    <b><%= a.action %></b>
+                    <p><%= a.detail||'Action recorded in the system' %></p>
+                </div>
+            </article>
+        <% }) %>
+        <% if(!activities.length){ %>
+            <p class="empty">No activity has been recorded.</p>
+        <% } %>
+    </div>
+</section>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <title>Login | Task Manager</title>
+
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3b68b7">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TaskManager">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-card">
+        <div class="login-icon">
+            <img src="/icons/icon.svg" alt="Task Manager Logo" class="brand-logo">
+        </div>
+        <h1>Welcome back</h1>
+        <p>Sign in to manage your work.</p>
+
+        <button id="pwa-install-btn" class="btn primary wide" style="display:none; margin-bottom: 14px; background:#2b579a; font-weight:700;">
+            <i class="fa-solid fa-download"></i> Install App on Mobile
+        </button>
+
+        <% if(error){ %>
+            <div class="alert error"><%= error %></div>
+        <% } %>
+
+        <form method="post" action="/login">
+            <label>Email
+                <input type="email" name="email" required autocomplete="email" placeholder="you@gmail.com">
+            </label>
+            <label>Password
+                <input type="password" name="password" required autocomplete="current-password" placeholder="Your password">
+            </label>
+            <button class="btn primary wide">Sign in</button>
+        </form>
+
+        <div class="demo">
+            <b>Demo accounts</b>
+            <span>Admin: chetan@gmail.com / chetan</span>
+            <span>Manager: bhavin@gmail.com / bhavin</span>
+            <span>Employee: chintan@gmail.com / chintan</span>
+            <span>Employee: jemini@gmail.com / jemini</span>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+npm-debug.log*
+*.log
+
+# Electron Cache
+.electron-cache/
+.asar-stage-compact/
+
+# Local Files
+.localappdata/
+.npm-cache/
+
+# Build
+dist/
+build/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# AWS Keys (NEVER push these)
+*.pem
+aws/

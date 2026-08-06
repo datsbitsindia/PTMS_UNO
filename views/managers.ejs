@@ -1,0 +1,87 @@
+<%- include('partials/head',{title:'Managers'}) %><%- include('partials/nav',{page:'managers'}) %>
+<% const activeCount = managers.filter(x=>x.active).length, departments = new Set(managers.map(x=>x.department).filter(Boolean)).size; %>
+<div class="metric-grid employee-kpis four">
+    <div class="metric-card purple" onclick="filterByKpi('all', event)" title="Click to show all">
+        <i class="fa-solid fa-user-tie"></i>
+        <b><%= managers.length %></b>
+        <span>Total Managers</span>
+    </div>
+    <div class="metric-card green" onclick="filterByKpi('Active', event)" title="Click to filter Active">
+        <i class="fa-solid fa-circle-check"></i>
+        <b><%= activeCount %></b>
+        <span>Active</span>
+    </div>
+    <div class="metric-card orange" onclick="filterByKpi('Inactive', event)" title="Click to filter Inactive">
+        <i class="fa-solid fa-pause"></i>
+        <b><%= managers.length - activeCount %></b>
+        <span>Inactive</span>
+    </div>
+    <div class="metric-card red" onclick="filterByKpi('all', event)" title="Click to reset filter">
+        <i class="fa-solid fa-building"></i>
+        <b><%= departments %></b>
+        <span>Departments</span>
+    </div>
+</div>
+
+
+<section class="ui-panel">
+    <div class="ui-panel-head">
+        <h2>Manager Accounts</h2>
+    </div>
+    <div class="entity-list">
+        <% managers.forEach(m=>{ %>
+            <article class="entity-card manager-card" data-status="<%= m.active ? 'Active' : 'Inactive' %>">
+                <div class="entity-title" style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;">
+                        <b style="font-size:14px; color:#0f172a;"><%= m.name %></b>
+                        <span class="status-chip <%= m.active?'active':'inactive' %>"><%= m.active?'Active':'Inactive' %></span>
+                    </div>
+                    <small style="color:#64748b; font-size:11px;"><%= m.email %></small>
+                    <div class="manager-inline-info" style="display:flex; align-items:center; gap:12px; margin-top:4px; font-size:11px; color:#475569; flex-wrap:wrap;">
+                        <span><i class="fa-solid fa-building" style="color:#6366f1;"></i> <b>Dept:</b> <%= m.department||'—' %></span>
+                        <span><i class="fa-solid fa-user-tag" style="color:#16a34a;"></i> <b>Role:</b> <%= m.designation||'Manager' %></span>
+                    </div>
+                </div>
+                <div class="row-actions" style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <button class="icon-btn edit-manager" data-manager='<%- JSON.stringify({id:m.id,name:m.name,email:m.email,phone:m.phone||'',department:m.department||'',designation:m.designation||'Manager'}) %>' title="Edit manager">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <form action="/managers/<%= m.id %>/toggle" method="post" style="margin:0;">
+                        <button class="icon-btn" title="<%= m.active ? 'Deactivate manager' : 'Activate manager' %>" style="color:<%= m.active ? '#16a34a' : '#94a3b8' %>;">
+                            <i class="fa-solid <%= m.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:16px;"></i>
+                        </button>
+                    </form>
+                    <form action="/managers/<%= m.id %>/delete" method="post" onsubmit="return confirm('Delete this manager account? Assigned projects will be unassigned.')" style="margin:0;">
+                        <button class="icon-btn delete-employee" title="Delete manager">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </article>
+        <% }) %>
+        <% if(!managers.length){ %>
+            <p class="empty">No managers created yet.</p>
+        <% } %>
+    </div>
+</section>
+
+<div class="modal" id="manager-modal">
+    <div class="modal-card">
+        <button class="modal-close" data-close>&times;</button>
+        <h2 id="manager-title">Add manager</h2>
+        <form method="post" action="/managers/save" class="form-grid" id="manager-form">
+            <input type="hidden" name="id" id="manager-id-input">
+            <label>Name<input name="name" required></label>
+            <label>Email<input type="email" name="email" required></label>
+            <label>Phone<input name="phone"></label>
+            <label>Department<input name="department"></label>
+            <label>Designation<input name="designation" value="Manager"></label>
+            <label>Password<input type="password" name="password"><small id="pwd-note">Required for new managers</small></label>
+            <div class="full actions">
+                <button type="button" class="btn" data-close>Cancel</button>
+                <button class="btn primary">Save manager</button>
+            </div>
+        </form>
+    </div>
+</div>
+<%- include('partials/foot') %>

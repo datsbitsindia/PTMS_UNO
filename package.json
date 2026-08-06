@@ -1,0 +1,26 @@
+{
+    "name": "ptms-uno",
+    "productName": "PTMS UNO Enterprise",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Employee task management system (Progressive Web App)",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "node --watch app.js",
+        "app": "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File start-app.ps1",
+        "autostart:enable": "powershell -Command \"$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut((Join-Path ([System.Environment]::GetFolderPath('Startup')) 'TaskManager.lnk')); $Shortcut.TargetPath = 'powershell.exe'; $Shortcut.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \\\"' + (Join-Path (Get-Location) 'start-app.ps1') + '\\\"'; $Shortcut.WorkingDirectory = Get-Location; $Shortcut.Save()\"",
+        "autostart:disable": "powershell -Command \"Remove-Item (Join-Path ([System.Environment]::GetFolderPath('Startup')) 'TaskManager.lnk') -ErrorAction SilentlyContinue\""
+    },
+    "dependencies": {
+        "bcrypt": "^5.1.1",
+        "dotenv": "^16.4.7",
+        "ejs": "^3.1.10",
+        "express": "^4.21.2",
+        "express-mysql-session": "^3.0.3",
+        "express-session": "^1.18.1",
+        "helmet": "^8.0.0",
+        "multer": "^1.4.5-lts.1",
+        "mysql2": "^3.12.0"
+    }
+}

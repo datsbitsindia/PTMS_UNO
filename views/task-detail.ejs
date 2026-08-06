@@ -1,0 +1,228 @@
+<%- include('partials/head',{title:task.title}) %><%- include('partials/nav',{page:'tasks'}) %>
+<% if(success){ %>
+    <div class="success-toast">
+        <i class="fa-solid fa-circle-check"></i>
+        <span><b>Update successful</b><small><%= success==='forwarded' ? 'Task has been forwarded successfully!' : (success==='status'?'Task status has been updated.':'Your update has been posted.') %></small></span>
+    </div>
+<% } %>
+
+<section class="panel task-detail-card">
+    <div class="task-detail-header">
+        <a href="/tasks" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to tasks</a>
+        <div class="task-title-group">
+            <h2><%= task.title %></h2>
+            <span class="project-tag"><i class="fa-solid fa-folder-open"></i> <%= task.project_name||'No project' %></span>
+        </div>
+        <div class="task-action-row">
+            <span class="task-action-pill priority-pill <%= task.priority.toLowerCase() %>"><%= task.priority %> Priority</span>
+            <% if (task.is_forwarded) { %>
+                <span class="task-action-pill forwarded-pill" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;">
+                    <i class="fa-solid fa-share"></i> Forwarded
+                </span>
+            <% } %>
+            <% if (task.assigned_to === user.id || task.created_by === user.id || user.role === 'admin') { %>
+                <button type="button" class="task-action-pill forward-pill" style="background:#d3e3fd;color:#0b2d68;border-color:#bae0fd;" data-open="forward-task-modal">
+                    <i class="fa-solid fa-share"></i> Re-assign / Forward Task
+                </button>
+            <% } %>
+
+            <% if (task.created_by === user.id || user.role === 'admin' || task.manager_id === user.id) { %>
+                <button type="button" class="task-action-pill edit-pill" data-open="edit-task-modal">
+                    <i class="fa-solid fa-pen"></i> Edit Task
+                </button>
+                <form action="/tasks/<%= task.id %>/delete" method="post" onsubmit="return confirm('Delete this task? Assigned user will be notified.')" style="margin:0;display:inline-flex;">
+                    <button type="submit" class="task-action-pill delete-pill">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </form>
+            <% } %>
+        </div>
+    </div>
+
+    <% if(task.description){ %>
+        <div class="task-desc-box">
+            <small>Task Description</small>
+            <p><%= task.description %></p>
+        </div>
+    <% } %>
+
+    <div class="task-info-grid">
+        <div><small>Assigned By</small><b><%= task.creator_name %></b></div>
+        <div><small>Current Assignee</small><b><%= task.assigned_name %></b></div>
+        <div><small>Due Date</small><b><%= formatDate(task.due_date) %></b></div>
+        <div><small>Status</small><span class="status-chip <%= task.status.toLowerCase().replaceAll(' ','-') %>"><%= task.status %></span></div>
+    </div>
+
+    <% if (typeof forwardLogs !== 'undefined' && forwardLogs.length > 0) { %>
+        <div class="task-lineage-panel" style="margin-top:16px; padding:14px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+            <h4 style="margin:0 0 10px; font-size:13px; font-weight:700; color:#334155; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-timeline" style="color:#6366f1;"></i> Task Handover Lineage & Transfer History
+            </h4>
+            <div class="lineage-timeline" style="display:flex; flex-direction:column; gap:10px; padding-left:4px;">
+                <div class="lineage-item" style="font-size:12px; color:#475569; display:flex; align-items:flex-start; gap:8px;">
+                    <i class="fa-solid fa-user-check" style="color:#16a34a; margin-top:2px;"></i>
+                    <div>
+                        <b><%= task.creator_name %></b> (Manager) assigned task to original employee on <time style="color:#64748b;"><%= formatDateTime(task.created_at) %></time>
+                    </div>
+                </div>
+                <% forwardLogs.forEach(f => { %>
+                    <div class="lineage-item" style="font-size:12px; color:#334155; padding-left:12px; border-left:2px solid #a5b4fc; margin-left:5px;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <i class="fa-solid fa-share" style="color:#6366f1; font-size:11px;"></i>
+                            <b><%= f.from_name %></b> ➔ forwarded to <b><%= f.to_name %></b>
+                            <span style="color:#64748b; font-size:11px;">· <%= formatDateTime(f.created_at) %></span>
+                        </div>
+                        <% if (f.reason) { %>
+                            <div style="margin-top:3px; background:#ffffff; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; color:#1e293b;">
+                                💬 <b>Note:</b> "<%= f.reason %>"
+                            </div>
+                        <% } %>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+    <% } %>
+
+    <% if (task.assigned_to === user.id) { %>
+        <form action="/tasks/<%= task.id %>/status" method="post" class="status-update-form" style="margin-top:14px;">
+            <label>Change Status</label>
+            <select name="status">
+                <% ['Pending','In Progress','Completed','Cancelled'].forEach(x=>{ %>
+                    <option <%= task.status===x?'selected':'' %>><%= x %></option>
+                <% }) %>
+            </select>
+            <button class="btn primary">Update status</button>
+        </form>
+    <% } else { %>
+        <p class="muted compact-note" style="margin-top:10px; color:#475569;">
+            <i class="fa-solid fa-user-check" style="color:#6366f1;"></i> Task assigned to <b><%= task.assigned_name %></b>. Status can be updated by the current assignee.
+        </p>
+    <% } %>
+</section>
+
+<section class="panel whatsapp-chat-panel">
+    <div class="chat-header">
+        <i class="fa-solid fa-comments"></i>
+        <h3>Updates & Discussion</h3>
+        <span class="badge-count"><%= comments.length %> updates</span>
+    </div>
+    <div class="chat-messages-container" id="chat-messages-box">
+        <% comments.forEach(c => { %>
+            <div class="chat-bubble <%= c.user_id === user.id ? 'outgoing' : 'incoming' %>">
+                <% if(c.user_id !== user.id){ %>
+                    <span class="sender-name"><%= c.name %></span>
+                <% } %>
+                <p class="message-text"><%= c.message %></p>
+                <div class="message-meta">
+                    <time><%= formatDateTime(c.created_at) %></time>
+                    <% if(c.user_id === user.id){ %>
+                        <i class="fa-solid fa-check-double read-receipt"></i>
+                    <% } %>
+                </div>
+            </div>
+        <% }) %>
+        <% if(!comments.length){ %>
+            <p class="empty-chat">No updates posted yet. Be the first to post an update!</p>
+        <% } %>
+    </div>
+    <form action="/tasks/<%= task.id %>/comment" method="post" class="chat-input-form">
+        <textarea name="message" required placeholder="Write an update..."></textarea>
+        <button class="btn primary send-btn" title="Post Update"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+</section>
+
+<!-- Forward Task Modal -->
+<div class="modal" id="forward-task-modal">
+    <div class="modal-card">
+        <button class="modal-close" data-close>&times;</button>
+        <h2><i class="fa-solid fa-share" style="color:#6366f1;"></i> Forward Task to Colleague</h2>
+        <p style="color:#64748b; font-size:13px; margin-bottom:14px;">Select the colleague you want to hand over this task to and provide a handover note.</p>
+        <form action="/tasks/<%= task.id %>/forward" method="post" class="form-grid">
+            <label class="full">Forward To Colleague
+                <select name="to_user_id" required>
+                    <option value="">Select Colleague...</option>
+                    <% if (typeof employees !== 'undefined' && employees.length) { %>
+                        <optgroup label="Employees">
+                            <% employees.filter(e => e.id !== task.assigned_to).forEach(e => { %>
+                                <option value="<%= e.id %>"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
+                            <% }) %>
+                        </optgroup>
+                    <% } %>
+                    <% if (typeof managers !== 'undefined' && managers.length) { %>
+                        <optgroup label="Managers">
+                            <% managers.filter(m => m.id !== task.assigned_to).forEach(m => { %>
+                                <option value="<%= m.id %>"><%= m.name %> (Manager)</option>
+                            <% }) %>
+                        </optgroup>
+                    <% } %>
+                </select>
+            </label>
+            <label class="full">Handover Note / Reason
+                <textarea name="reason" rows="3" required placeholder="e.g. Front-end complete ho gaya hai, Backend API binding ke liye forward kar raha hu."></textarea>
+            </label>
+            <div class="full actions">
+                <button type="button" class="btn" data-close>Cancel</button>
+                <button class="btn primary"><i class="fa-solid fa-paper-plane"></i> Forward Task Now</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<% if(user.role==='manager'||user.role==='admin'){ %>
+    <div class="modal" id="edit-task-modal">
+        <div class="modal-card">
+            <button class="modal-close" data-close>&times;</button>
+            <h2>Edit Task Details</h2>
+            <form action="/tasks/save" method="post" class="form-grid">
+                <input type="hidden" name="id" value="<%= task.id %>">
+                <label class="full">Project
+                    <select name="project_id">
+                        <option value="">Normal Task (No Project)</option>
+                        <% (typeof projects!=='undefined'?projects:[]).forEach(p=>{ %>
+                            <option value="<%= p.id %>" <%= task.project_id===p.id?'selected':'' %>><%= p.name %></option>
+                        <% }) %>
+                    </select>
+                </label>
+                <label class="full">Task title
+                    <input name="title" value="<%= task.title %>" required>
+                </label>
+                <label class="full">Description
+                    <textarea name="description" rows="3"><%= task.description||'' %></textarea>
+                </label>
+                <label>Assigned Employee
+                    <select name="assigned_to" required>
+                        <% (typeof employees!=='undefined'?employees:[]).forEach(e=>{ %>
+                            <option value="<%= e.id %>" <%= task.assigned_to===e.id?'selected':'' %>><%= e.name %></option>
+                        <% }) %>
+                    </select>
+                </label>
+                <label>Priority
+                    <select name="priority">
+                        <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
+                            <option value="<%= x %>" <%= task.priority===x?'selected':'' %>><%= x %></option>
+                        <% }) %>
+                    </select>
+                </label>
+                <label>Estimated Hours
+                    <input type="number" name="estimated_hours" min="0" step="0.5" value="<%= task.estimated_hours||0 %>">
+                </label>
+                <label>Due Date
+                    <input type="date" name="due_date" value="<%= task.due_date?new Date(task.due_date).toISOString().split('T')[0]:'' %>" required>
+                </label>
+                <div class="full actions">
+                    <button type="button" class="btn" data-close>Cancel</button>
+                    <button class="btn primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<% } %>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    const box = document.getElementById('chat-messages-box');
+    if(box) box.scrollTop = box.scrollHeight;
+});
+</script>
+<%- include('partials/task-modal') %>
+<%- include('partials/foot') %>

@@ -1,0 +1,336 @@
+<% if (user && user.role === 'manager' && typeof employees !== 'undefined' && typeof projects !== 'undefined') { %>
+
+    <div class="modal" id="task-modal">
+
+        <div class="modal-card">
+
+            <!-- Modal Header Tabs -->
+            <div class="modal-header-tabs">
+                <div class="modal-tabs">
+                    <button type="button" class="modal-tab active" data-tab="single-task-tab">
+                        <i class="fa-solid fa-list-check"></i> Regular Task
+                    </button>
+                    <button type="button" class="modal-tab" data-tab="routine-tab">
+                        <i class="fa-solid fa-repeat"></i> Daily Routine
+                    </button>
+                    <button type="button" class="modal-tab" data-tab="manager-task-tab">
+                        <i class="fa-solid fa-user-tie"></i> Assign Manager
+                    </button>
+                </div>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+
+            <!-- Single Regular Task Form -->
+            <div class="modal-tab-content active" id="single-task-tab">
+
+                <h2 id="task-form-heading">Assign employee task</h2>
+
+                <form
+                    action="/tasks/save"
+                    method="POST"
+                    class="form-grid"
+                    id="single-task-form"
+                >
+                    <input type="hidden" name="id" id="task-id-input">
+
+                    <label class="full">
+                        Project
+                        <select name="project_id">
+                            <option value="">Normal Task (No Project)</option>
+                            <% projects.forEach(p => { %>
+                                <option value="<%= p.id %>">
+                                    <%= p.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label class="full">
+                        Task title
+                        <input
+                            name="title"
+                            required
+                        >
+                    </label>
+
+                    <label class="full">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span>Description</span>
+                            <div class="textarea-toolbar">
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 0)" title="Add bullet point">
+                                    <i class="fa-solid fa-list-ul"></i> Bullet
+                                </button>
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 1)" title="Add sub-bullet point">
+                                    <i class="fa-solid fa-indent"></i> Sub-bullet
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            name="description"
+                            rows="3"
+                        ></textarea>
+                    </label>
+
+                    <label>
+                        Employee
+                        <select name="assigned_to" required>
+                            <% employees.forEach(e => { %>
+                                <option value="<%= e.id %>">
+                                    <%= e.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Priority
+                        <select name="priority">
+                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
+                                <option><%= x %></option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Estimated Hours
+                        <input
+                            type="number"
+                            name="estimated_hours"
+                            min="0"
+                            step="0.5"
+                        >
+                    </label>
+
+                    <label>
+                        Due date
+                        <input
+                            type="date"
+                            name="due_date"
+                            required
+                        >
+                    </label>
+
+                    <div class="full actions">
+                        <button
+                            type="button"
+                            class="btn"
+                            data-close
+                        >
+                            Cancel
+                        </button>
+                        <button class="btn primary">
+                            Assign Task
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- Daily Routine Form -->
+            <div class="modal-tab-content" id="routine-tab">
+
+                <h2><i class="fa-solid fa-repeat" style="color: #f59e0b;"></i> Assign Daily Routine Task</h2>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Set up a daily task schedule for employee within a specific timeline range.</p>
+
+                <form action="/tasks/routine/save" method="POST" class="form-grid">
+
+                    <label class="full">
+                        Project
+                        <select name="project_id">
+                            <option value="">Normal Task (No Project)</option>
+                            <% projects.forEach(p => { %>
+                                <option value="<%= p.id %>">
+                                    <%= p.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label class="full">
+                        Task title
+                        <input name="title" placeholder="e.g., Morning Code Review & Daily Status Update" required>
+                    </label>
+
+                    <label class="full">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span>Description</span>
+                            <div class="textarea-toolbar">
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 0)" title="Add bullet point">
+                                    <i class="fa-solid fa-list-ul"></i> Bullet
+                                </button>
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 1)" title="Add sub-bullet point">
+                                    <i class="fa-solid fa-indent"></i> Sub-bullet
+                                </button>
+                            </div>
+                        </div>
+                        <textarea name="description" rows="3" placeholder="Describe the routine tasks employee must perform every morning..."></textarea>
+                    </label>
+
+                    <label>
+                        Employee
+                        <select name="assigned_to" required>
+                            <% employees.forEach(e => { %>
+                                <option value="<%= e.id %>">
+                                    <%= e.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Priority
+                        <select name="priority">
+                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
+                                <option <%= x === 'High' ? 'selected' : '' %>><%= x %></option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Timeline Start Date
+                        <input type="date" name="start_date" required>
+                    </label>
+
+                    <label>
+                        Timeline End Date
+                        <input type="date" name="end_date" required>
+                    </label>
+
+                    <label>
+                        Estimated Hours (Daily)
+                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 1.0">
+                    </label>
+
+                    <label>
+                        Daily Assignment Time
+                        <input type="time" name="daily_time" value="09:00" required>
+                    </label>
+
+                    <label class="full" style="display: flex; align-items: center; gap: 8px; margin-top: 0.5rem;">
+                        <input type="checkbox" name="mandatory" value="1" checked style="width: auto; height: 18px;">
+                        <span style="font-weight: 500; font-size: 0.9rem;">High Priority (Must Complete First Every Morning)</span>
+                    </label>
+
+                    <div class="full actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn" data-close>
+                            Cancel
+                        </button>
+                        <button class="btn primary">
+                            <i class="fa-solid fa-check"></i> Assign Daily Routine Task
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- Manager Task Form -->
+            <div class="modal-tab-content" id="manager-task-tab">
+
+                <h2><i class="fa-solid fa-user-tie" style="color: #6366f1;"></i> Assign Task to Manager</h2>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Assign a high-level task or project responsibility to another Manager.</p>
+
+                <form action="/tasks/save" method="POST" class="form-grid">
+
+                    <label class="full">
+                        Project
+                        <select name="project_id">
+                            <option value="">Normal Task (No Project)</option>
+                            <% (typeof projects !== 'undefined' ? projects : []).forEach(p => { %>
+                                <option value="<%= p.id %>">
+                                    <%= p.name %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label class="full">
+                        Task title
+                        <input name="title" placeholder="e.g. Lead Sprint Planning & Architecture Review" required>
+                    </label>
+
+                    <label class="full">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span>Description</span>
+                            <div class="textarea-toolbar">
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 0)" title="Add bullet point">
+                                    <i class="fa-solid fa-list-ul"></i> Bullet
+                                </button>
+                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 1)" title="Add sub-bullet point">
+                                    <i class="fa-solid fa-indent"></i> Sub-bullet
+                                </button>
+                            </div>
+                        </div>
+                        <textarea name="description" rows="3" placeholder="Provide details, scope, and objectives for the manager..."></textarea>
+                    </label>
+
+                    <label>
+                        Assign to Manager
+                        <select name="assigned_to" required>
+                            <option value="">Select Manager...</option>
+                            <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
+                                <option value="<%= m.id %>">
+                                    <%= m.name %> (<%= m.designation || 'Manager' %>)
+                                </option>
+                            <% }) %>
+                            <% if (typeof managers !== 'undefined' && !managers.filter(m => m.id !== user.id).length) { %>
+                                <% managers.forEach(m => { %>
+                                    <option value="<%= m.id %>"><%= m.name %></option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Priority
+                        <select name="priority">
+                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
+                                <option <%= x === 'High' ? 'selected' : '' %>><%= x %></option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label>
+                        Estimated Hours
+                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 5.0">
+                    </label>
+
+                    <label>
+                        Due date
+                        <input type="date" name="due_date" required>
+                    </label>
+
+                    <div class="full actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn" data-close>
+                            Cancel
+                        </button>
+                        <button class="btn primary">
+                            <i class="fa-solid fa-user-tie"></i> Assign Task to Manager
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+    document.querySelectorAll('.modal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const modal = tab.closest('.modal-card');
+            if (!modal) return;
+            modal.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            modal.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            const content = document.getElementById(tab.dataset.tab);
+            if (content) content.classList.add('active');
+        });
+    });
+    </script>
+
+<% } %>

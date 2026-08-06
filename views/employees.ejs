@@ -1,0 +1,101 @@
+<%- include('partials/head',{title:'Employees'}) %>
+<%- include('partials/nav',{page:'employees'}) %>
+
+<% const active=employees.filter(e=>e.active).length, departments=new Set(employees.map(e=>e.department).filter(Boolean)).size; %>
+
+<div class="metric-grid employee-kpis four">
+    <div class="metric-card purple" onclick="filterByKpi('all', event)" title="Click to show all">
+        <i class="fa-solid fa-users"></i>
+        <b><%= employees.length %></b>
+        <span>Total Employees</span>
+    </div>
+    <div class="metric-card green" onclick="filterByKpi('Active', event)" title="Click to filter Active">
+        <i class="fa-solid fa-briefcase"></i>
+        <b><%= active %></b>
+        <span>Active</span>
+    </div>
+    <div class="metric-card orange" onclick="filterByKpi('Inactive', event)" title="Click to filter Inactive">
+        <i class="fa-solid fa-pause"></i>
+        <b><%= employees.length-active %></b>
+        <span>Inactive</span>
+    </div>
+    <div class="metric-card red" onclick="filterByKpi('all', event)" title="Click to reset filter">
+        <i class="fa-solid fa-building"></i>
+        <b><%= departments %></b>
+        <span>Departments</span>
+    </div>
+</div>
+
+<div class="toolbar-ui compact-filter">
+    <input type="search" placeholder="Search employees...">
+    <select>
+        <option>All Departments</option>
+        <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
+            <option><%= x %></option>
+        <% }) %>
+    </select>
+    <select>
+        <option>All Designations</option>
+        <% [...new Set(employees.map(e=>e.designation).filter(Boolean))].forEach(x=>{ %>
+            <option><%= x %></option>
+        <% }) %>
+    </select>
+    <button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button>
+</div>
+
+<section class="ui-panel">
+    <div class="entity-list">
+        <% employees.forEach(e=>{ %>
+            <article class="entity-card employee-card" data-status="<%= e.active ? 'Active' : 'Inactive' %>">
+                <div class="entity-title" style="flex:1 1 auto!important; min-width:0!important;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;">
+                        <b style="font-size:14px; color:#0f172a;"><%= e.name %></b>
+                        <span class="status-chip <%= e.active?'active':'inactive' %>"><%= e.active?'Active':'Inactive' %></span>
+                    </div>
+                    <small style="color:#64748b; font-size:11px; display:block; overflow:hidden; text-overflow:ellipsis;"><%= e.email %></small>
+                    <div class="employee-inline-info" style="display:flex; align-items:center; gap:10px; margin-top:3px; font-size:11px; color:#475569; flex-wrap:wrap;">
+                        <span><i class="fa-solid fa-building" style="color:#6366f1;"></i> <b>Dept:</b> <%= e.department||'—' %></span>
+                        <span><i class="fa-solid fa-user-tag" style="color:#16a34a;"></i> <b>Role:</b> <%= e.designation||'—' %></span>
+                    </div>
+                </div>
+                <div class="row-actions" style="display:flex!important; flex-direction:row!important; align-items:center!important; gap:8px!important; flex-shrink:0!important; margin-left:auto!important;">
+                    <button class="icon-btn edit-employee" data-employee='<%- JSON.stringify({id:e.id,name:e.name,email:e.email,phone:e.phone,department:e.department,designation:e.designation}) %>' title="Edit employee">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <form action="/employees/<%= e.id %>/toggle" method="post" style="margin:0;">
+                        <button class="icon-btn" title="<%= e.active ? 'Deactivate employee' : 'Activate employee' %>" style="color:<%= e.active ? '#16a34a' : '#94a3b8' %>;">
+                            <i class="fa-solid <%= e.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:16px;"></i>
+                        </button>
+                    </form>
+                    <form action="/employees/<%= e.id %>/delete" method="post" onsubmit="return confirm('Delete this employee? This cannot be undone.')" style="margin:0;">
+                        <button class="icon-btn delete-employee" title="Delete employee">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </article>
+        <% }) %>
+    </div>
+</section>
+
+<div class="modal" id="employee-modal">
+    <div class="modal-card">
+        <button class="modal-close" data-close>&times;</button>
+        <h2 id="employee-title">Add employee</h2>
+        <form method="post" action="/employees/save" class="form-grid" id="employee-form">
+            <input type="hidden" name="id">
+            <label>Name<input name="name" required></label>
+            <label>Email<input type="email" name="email" required></label>
+            <label>Phone<input name="phone"></label>
+            <label>Department<input name="department"></label>
+            <label>Designation<input name="designation"></label>
+            <label>Password<input type="password" name="password"><small>Required for new employees</small></label>
+            <div class="full actions">
+                <button type="button" class="btn" data-close>Cancel</button>
+                <button class="btn primary">Save employee</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<%- include('partials/foot') %>

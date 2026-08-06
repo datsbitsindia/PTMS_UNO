@@ -1,0 +1,285 @@
+<%- include('partials/head', { title: 'Tasks' }) %>
+<%- include('partials/nav', { page: 'tasks' }) %>
+
+<%
+    const done = tasks.filter(
+        t => String(t.status).toLowerCase() === 'completed'
+    ).length;
+
+    const pending = tasks.filter(
+        t => String(t.status).toLowerCase() === 'pending'
+    ).length;
+
+    const progress = tasks.filter(
+        t => String(t.status).toLowerCase() === 'in progress'
+    ).length;
+
+    const overdueCount = tasks.filter(t => t.is_overdue).length;
+%>
+
+<div class="metric-grid task-kpis five">
+
+    <div class="metric-card" onclick="filterByKpi('all', event)" title="Click to show all tasks">
+        <i class="fa-solid fa-list-check"></i>
+        <b><%= tasks.length %></b>
+        <span>Total Tasks</span>
+    </div>
+
+    <div class="metric-card orange" onclick="filterByKpi('Pending', event)" title="Click to filter Pending tasks">
+        <i class="fa-regular fa-clock"></i>
+        <b><%= pending %></b>
+        <span>Pending</span>
+    </div>
+
+    <div class="metric-card purple" onclick="filterByKpi('In Progress', event)" title="Click to filter In Progress tasks">
+        <i class="fa-solid fa-spinner"></i>
+        <b><%= progress %></b>
+        <span>In Progress</span>
+    </div>
+
+    <div class="metric-card green" onclick="filterByKpi('Completed', event)" title="Click to filter Completed tasks">
+        <i class="fa-regular fa-circle-check"></i>
+        <b><%= done %></b>
+        <span>Completed</span>
+    </div>
+
+    <div class="metric-card red" onclick="filterByKpi('Overdue', event)" title="Click to filter Overdue tasks">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <b><%= overdueCount %></b>
+        <span>Overdue</span>
+    </div>
+
+</div>
+
+<%
+    const overdueTasks = tasks.filter(t => t.is_overdue);
+    const routineTasksToday = tasks.filter(t => t.is_routine && String(t.status).toLowerCase() !== 'completed');
+%>
+
+<% if (user.role === 'manager' && typeof dailyRoutines !== 'undefined' && dailyRoutines.length) { %>
+    <section class="ui-panel routine-panel">
+        <div class="ui-panel-head">
+            <h2><i class="fa-solid fa-repeat" style="color: #5b5fc7;"></i> Active Daily Routines (Timeline Schedules)</h2>
+            <span class="muted"><%= dailyRoutines.length %> schedule<%= dailyRoutines.length > 1 ? 's' : '' %></span>
+        </div>
+        <div class="routine-grid">
+            <% dailyRoutines.forEach(r => { %>
+                <article class="routine-card">
+                    <div class="routine-card-top">
+                        <div class="routine-card-info">
+                            <b><%= r.title %></b>
+                            <small><%= r.project_name %> · <%= r.description || 'Daily routine task' %></small>
+                        </div>
+                        <span class="status-chip <%= r.active ? 'in-progress' : 'cancelled' %>">
+                            <%= r.active ? 'Active' : 'Paused' %>
+                        </span>
+                    </div>
+
+                    <div class="routine-card-meta">
+                        <div>
+                            <small>Assigned To</small>
+                            <b><%= r.assigned_name %></b>
+                        </div>
+                        <div>
+                            <small>Timeline</small>
+                            <b><%= formatDate(r.start_date) %> ➔ <%= formatDate(r.end_date) %></b>
+                        </div>
+                        <div>
+                            <small>Daily Time</small>
+                            <b><i class="fa-regular fa-clock"></i> <%= r.daily_time %></b>
+                        </div>
+                    </div>
+
+                    <div class="routine-card-actions">
+                        <form action="/tasks/routine/<%= r.id %>/toggle" method="POST" style="display:inline;">
+                            <button class="btn btn-sm <%= r.active ? 'secondary' : 'primary' %>" title="<%= r.active ? 'Pause Routine' : 'Activate Routine' %>">
+                                <i class="fa-solid <%= r.active ? 'fa-pause' : 'fa-play' %>"></i> <%= r.active ? 'Pause' : 'Activate' %>
+                            </button>
+                        </form>
+                        <form action="/tasks/routine/<%= r.id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('Delete this routine schedule?');">
+                            <button class="btn btn-sm danger-btn" title="Delete Routine">
+                                <i class="fa-solid fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            <% }) %>
+        </div>
+    </section>
+<% } %>
+
+<% if (user.role === 'employee' && routineTasksToday.length) { %>
+    <div class="routine-alert-banner">
+        <div class="routine-alert-head">
+            <i class="fa-solid fa-sun icon-sun"></i>
+            <div>
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Today's Daily Routine (Must Complete First)</h3>
+                <p>Please complete your assigned daily routine tasks before starting other regular tasks.</p>
+            </div>
+        </div>
+        <div class="routine-card-grid">
+            <% routineTasksToday.forEach(rt => { %>
+                <div class="routine-highlight-card">
+                    <div class="routine-card-header">
+                        <span class="routine-badge"><i class="fa-solid fa-repeat"></i> Daily Routine</span>
+                        <span class="status-chip <%= rt.status.toLowerCase().replaceAll(' ', '-') %>"><%= rt.status %></span>
+                    </div>
+                    <h4><a href="/tasks/<%= rt.id %>"><%= rt.title %></a></h4>
+                    <p><%= rt.description || 'Complete daily morning routine' %></p>
+                    <div class="routine-card-footer">
+                        <small><i class="fa-solid fa-folder"></i> <%= rt.project_name || 'Project' %></small>
+                        <a href="/tasks/<%= rt.id %>" class="btn btn-sm primary">Start / Complete <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+<% } %>
+
+<% if (overdueTasks.length) { %>
+    <div class="overdue-alert">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <div>
+            <b>
+                <%= overdueTasks.length %>
+                overdue task<%= overdueTasks.length > 1 ? 's' : '' %>
+            </b>
+            <span>
+                <%= user.role === 'manager'
+                    ? 'Employee tasks are overdue. Please follow up urgently.'
+                    : 'Due date has passed. Please complete the task urgently.'
+                %>
+            </span>
+        </div>
+    </div>
+<% } %>
+
+<section class="ui-panel">
+
+    <div class="toolbar-ui compact-filter" style="margin-bottom: 16px;">
+        <input
+            type="search"
+            placeholder="Search tasks..."
+        >
+
+        <select>
+            <option>All Projects</option>
+            <% projects.forEach(p => { %>
+                <option><%= p.name %></option>
+            <% }) %>
+        </select>
+
+        <select>
+            <option>All Status</option>
+            <option>Pending</option>
+            <option>In Progress</option>
+            <option>Completed</option>
+            <option>Overdue</option>
+            <option value="forwarded">↪️ Forwarded Tasks</option>
+        </select>
+
+        <button type="button" class="filter-confirm">
+            <i class="fa-solid fa-check"></i>
+            Confirm
+        </button>
+    </div>
+
+    <div class="entity-list">
+
+        <% tasks.forEach(t => { %>
+
+            <article
+                class="entity-card task-card <%= t.is_overdue ? 'overdue-card' : '' %> <%= t.is_routine ? 'routine-task-card' : '' %>"
+                data-status="<%= String(t.status).toLowerCase().replaceAll(' ', '-') %>"
+                data-overdue="<%= t.is_overdue ? 'true' : 'false' %>"
+                data-forwarded="<%= t.is_forwarded ? 'true' : 'false' %>"
+                data-project="<%= (t.project_name || '').toLowerCase() %>"
+            >
+
+                <div class="entity-title">
+
+                    <div class="task-title-row">
+
+                        <a href="/tasks/<%= t.id %>">
+                            <%= t.title %>
+                        </a>
+
+                        <% if (t.is_routine) { %>
+                            <span class="routine-badge"><i class="fa-solid fa-repeat"></i> Daily Routine</span>
+                        <% } %>
+
+                        <span class="priority-pill <%= t.priority.toLowerCase() %>" style="font-weight:700; font-size:10px; padding:3px 8px; border-radius:99px;">
+                            <i class="fa-solid fa-flag"></i> <%= t.priority %>
+                        </span>
+
+                        <% if (t.is_forwarded) { %>
+                            <span class="status-chip forwarded" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;">
+                                <i class="fa-solid fa-share"></i> Forwarded
+                            </span>
+                        <% } %>
+
+                        <span
+                            class="status-chip <%= 
+                                t.is_overdue
+                                    ? 'overdue'
+                                    : t.status.toLowerCase().replaceAll(' ', '-')
+                            %>"
+                        >
+                            <%= t.is_overdue ? 'Overdue' : t.status %>
+                        </span>
+
+                    </div>
+
+                    <small>
+                        <%= t.project_name || 'No project' %>
+                        ·
+                        <%= t.description || 'Task details' %>
+                    </small>
+
+                </div>
+
+                <div class="entity-meta">
+                    <small>
+                        <%= user.role === 'manager' ? 'Assigned To' : 'Assigned By' %>
+                    </small>
+
+                    <b>
+                        <%= user.role === 'manager'
+                            ? t.assigned_name
+                            : t.creator_name
+                        %>
+                    </b>
+                </div>
+
+                <div class="entity-meta">
+                    <small>Assigned on</small>
+                    <b><%= formatDate(t.created_at) %></b>
+                </div>
+
+                <div class="entity-meta">
+                    <small>Due date</small>
+                    <b><%= formatDate(t.due_date) %></b>
+                </div>
+
+                <a
+                    class="entity-action"
+                    href="/tasks/<%= t.id %>"
+                >
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+
+            </article>
+
+        <% }) %>
+
+        <% if (!tasks.length) { %>
+            <p class="empty">No tasks found.</p>
+        <% } %>
+
+    </div>
+
+</section>
+
+<%- include('partials/task-modal') %>
+
+<%- include('partials/foot') %>

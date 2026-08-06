@@ -1,0 +1,97 @@
+<aside class="sidebar">
+    <div class="brand">
+        <img src="/icons/icon.svg" alt="Task Manager Logo" class="brand-logo">
+        <span>Task Manager</span>
+    </div>
+    <nav>
+        <% if (user.role === 'manager') { %>
+            <a href="/dashboard" class="<%= page === 'dashboard' ? 'active' : '' %>">
+                <i class="fa-solid fa-gauge"></i>Dashboard
+            </a>
+        <% } %>
+
+        <% if (user.role === 'admin') { %>
+            <a href="/projects" class="<%= page === 'projects' ? 'active' : '' %>">
+                <i class="fa-solid fa-folder-open"></i>Projects
+            </a>
+        <% } %>
+
+        <% if (user.role !== 'admin') { %>
+            <a href="/tasks" class="<%= page === 'tasks' ? 'active' : '' %>">
+                <i class="fa-solid fa-check-double"></i>Tasks
+            </a>
+        <% } %>
+
+        <% if (user.role === 'manager') { %>
+            <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
+                <i class="fa-solid fa-users"></i>Employees
+            </a>
+        <% } %>
+
+        <% if (user.role === 'admin') { %>
+            <a href="/managers" class="<%= page === 'managers' ? 'active' : '' %>">
+                <i class="fa-solid fa-user-tie"></i>Managers
+            </a>
+            <a href="/activity" class="<%= page === 'activity' ? 'active' : '' %>">
+                <i class="fa-solid fa-clock-rotate-left"></i>Activity Log
+            </a>
+        <% } %>
+
+        <a href="/notifications" class="<%= page === 'notifications' ? 'active' : '' %>">
+            <i class="fa-solid fa-bell"></i>Notifications
+            <% if (unread) { %>
+                <b class="badge"><%= unread %></b>
+            <% } %>
+        </a>
+
+        <a href="/profile" class="<%= page === 'profile' ? 'active' : '' %>">
+            <i class="fa-solid fa-user"></i>Profile
+        </a>
+    </nav>
+</aside>
+
+<section class="main">
+    <header class="topbar">
+        <button class="menu-btn">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="topbar-user">
+            <strong><%= user.name %></strong>
+            <small><%= user.role %></small>
+        </div>
+
+        <div class="topbar-right-group" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+            <% if (page === 'tasks' && user.role === 'manager') { %>
+                <button class="btn primary btn-sm" data-open="task-modal" style="white-space:nowrap;">
+                    <i class="fa-solid fa-plus"></i> Add Task
+                </button>
+            <% } %>
+
+            <% if (page === 'employees') { %>
+                <button class="btn primary btn-sm" data-open="employee-modal" style="white-space:nowrap;">
+                    <i class="fa-solid fa-user-plus"></i> Add Employee
+                </button>
+            <% } %>
+
+            <% if (page === 'managers' && user.role === 'admin') { %>
+                <button class="btn primary btn-sm" data-open="manager-modal" style="white-space:nowrap;">
+                    <i class="fa-solid fa-user-plus"></i> Add Manager
+                </button>
+            <% } %>
+
+            <% if (page === 'projects' && user.role === 'admin') { %>
+                <button class="btn primary btn-sm" data-open="project-modal" style="white-space:nowrap;">
+                    <i class="fa-solid fa-plus"></i> New Project
+                </button>
+            <% } %>
+
+
+
+            <form action="/logout" method="post" style="margin:0;">
+                <button class="link-btn" style="white-space:nowrap;">Logout</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="content">

@@ -1,0 +1,49 @@
+<%- include('partials/head',{title:'Profile'}) %>
+<%- include('partials/nav',{page:'profile'}) %>
+
+<section class="role-hero">
+    <div>
+        <h1>My Profile</h1>
+        <p>Update your personal information and password.</p>
+    </div>
+    <div class="role-hero-icon">
+        <i class="fa-solid fa-id-card"></i>
+    </div>
+</section>
+
+<% if(error){ %><div class="alert error"><%= error %></div><% } %>
+<% if(success){ %><div class="alert success"><%= success %></div><% } %>
+
+<div class="profile-shell">
+    <section class="ui-panel">
+        <div class="ui-panel-head">
+            <h2><i class="fa-solid fa-user"></i> Profile Details</h2>
+        </div>
+        <form method="post" action="/profile" class="form-grid">
+            <label>Name<input name="name" value="<%= profile.name %>" required></label>
+            <label>Email<input value="<%= profile.email %>" disabled></label>
+            <label>Phone<input name="phone" value="<%= profile.phone %>" placeholder="Enter phone number"></label>
+            <label>Department<input name="department" value="<%= profile.department %>"></label>
+            <label>Designation<input name="designation" value="<%= profile.designation %>"></label>
+            <label>Role<input value="<%= user.role %>" disabled></label>
+            <div class="full actions">
+                <button class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="ui-panel">
+        <div class="ui-panel-head">
+            <h2><i class="fa-solid fa-lock"></i> Change Password</h2>
+        </div>
+        <form method="post" action="/profile/password" class="stack">
+            <label>Current Password<input type="password" name="currentPassword" required></label>
+            <label>New Password<input type="password" name="newPassword" minlength="8" required></label>
+            <label>Confirm New Password<input type="password" name="confirmPassword" minlength="8" required></label>
+            <button class="btn primary"><i class="fa-solid fa-lock"></i> Change Password</button>
+        </form>
+    </section>
+</div>
+
+<%- include('partials/foot') %>
+
