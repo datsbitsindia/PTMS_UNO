@@ -1,7 +1,10 @@
 <%- include('partials/head', { title: 'Tasks' }) %>
 <%- include('partials/nav', { page: 'tasks' }) %>
 
+<script>window.CURRENT_USER_ID = <%= user.id %>;</script>
+
 <%
+    const givenByAdminCount = tasks.filter(t => Number(t.created_by) === Number(user.id)).length;
     const done = tasks.filter(
         t => String(t.status).toLowerCase() === 'completed'
     ).length;
@@ -17,13 +20,21 @@
     const overdueCount = tasks.filter(t => t.is_overdue).length;
 %>
 
-<div class="metric-grid task-kpis five">
+<div class="metric-grid task-kpis <%= user.role === 'admin' ? 'six' : 'five' %>">
 
     <div class="metric-card" onclick="filterByKpi('all', event)" title="Click to show all tasks">
         <i class="fa-solid fa-list-check"></i>
         <b><%= tasks.length %></b>
         <span>Total Tasks</span>
     </div>
+
+    <% if (user.role === 'admin') { %>
+        <div class="metric-card blue" onclick="filterByKpi('given_by_me', event)" title="Click to filter tasks given by Admin" style="background:#f0f9ff; border-color:#bae6fd;">
+            <i class="fa-solid fa-paper-plane" style="color:#0284c7;"></i>
+            <b style="color:#0369a1;"><%= givenByAdminCount %></b>
+            <span style="color:#0369a1; font-weight:700;">Given By You</span>
+        </div>
+    <% } %>
 
     <div class="metric-card orange" onclick="filterByKpi('Pending', event)" title="Click to filter Pending tasks">
         <i class="fa-regular fa-clock"></i>

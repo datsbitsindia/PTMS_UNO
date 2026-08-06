@@ -47,6 +47,11 @@ window.applyCompactFilter = function(bar) {
         const checkStatusMatch = (target) => {
             if (!target) return true;
             const cleanTarget = target.replaceAll(' ', '-').toLowerCase();
+            if (cleanTarget === 'given_by_me' || cleanTarget === 'given-by-me') {
+                const cardCreatedBy = Number(card.dataset.createdBy);
+                const currentUserId = window.CURRENT_USER_ID;
+                return cardCreatedBy === currentUserId;
+            }
             if (cleanTarget === 'overdue') {
                 return isOverdue || cardStatus === 'overdue';
             }
