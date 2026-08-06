@@ -13,9 +13,6 @@
                     <button type="button" class="modal-tab" data-tab="routine-tab">
                         <i class="fa-solid fa-repeat"></i> Daily Routine
                     </button>
-                    <button type="button" class="modal-tab" data-tab="manager-task-tab">
-                        <i class="fa-solid fa-user-tie"></i> Assign Manager
-                    </button>
                 </div>
                 <button class="modal-close" data-close>&times;</button>
             </div>
@@ -219,95 +216,6 @@
                         </button>
                         <button class="btn primary">
                             <i class="fa-solid fa-check"></i> Assign Daily Routine Task
-                        </button>
-                    </div>
-
-                </form>
-
-            </div>
-
-            <!-- Manager Task Form -->
-            <div class="modal-tab-content" id="manager-task-tab">
-
-                <h2><i class="fa-solid fa-user-tie" style="color: #6366f1;"></i> Assign Task to Manager</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Assign a high-level task or project responsibility to another Manager.</p>
-
-                <form action="/tasks/save" method="POST" class="form-grid">
-
-                    <label class="full">
-                        Project
-                        <select name="project_id">
-                            <option value="">Normal Task (No Project)</option>
-                            <% (typeof projects !== 'undefined' ? projects : []).forEach(p => { %>
-                                <option value="<%= p.id %>">
-                                    <%= p.name %>
-                                </option>
-                            <% }) %>
-                        </select>
-                    </label>
-
-                    <label class="full">
-                        Task title
-                        <input name="title" placeholder="e.g. Lead Sprint Planning & Architecture Review" required>
-                    </label>
-
-                    <label class="full">
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                            <span>Description</span>
-                            <div class="textarea-toolbar">
-                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 0)" title="Add bullet point">
-                                    <i class="fa-solid fa-list-ul"></i> Bullet
-                                </button>
-                                <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'), 1)" title="Add sub-bullet point">
-                                    <i class="fa-solid fa-indent"></i> Sub-bullet
-                                </button>
-                            </div>
-                        </div>
-                        <textarea name="description" rows="3" placeholder="Provide details, scope, and objectives for the manager..."></textarea>
-                    </label>
-
-                    <label>
-                        Assign to Manager
-                        <select name="assigned_to" required>
-                            <option value="">Select Manager...</option>
-                            <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
-                                <option value="<%= m.id %>">
-                                    <%= m.name %> (<%= m.designation || 'Manager' %>)
-                                </option>
-                            <% }) %>
-                            <% if (typeof managers !== 'undefined' && !managers.filter(m => m.id !== user.id).length) { %>
-                                <% managers.forEach(m => { %>
-                                    <option value="<%= m.id %>"><%= m.name %></option>
-                                <% }) %>
-                            <% } %>
-                        </select>
-                    </label>
-
-                    <label>
-                        Priority
-                        <select name="priority">
-                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
-                                <option <%= x === 'High' ? 'selected' : '' %>><%= x %></option>
-                            <% }) %>
-                        </select>
-                    </label>
-
-                    <label>
-                        Estimated Hours
-                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 5.0">
-                    </label>
-
-                    <label>
-                        Due date
-                        <input type="date" name="due_date" required>
-                    </label>
-
-                    <div class="full actions" style="margin-top: 1rem;">
-                        <button type="button" class="btn" data-close>
-                            Cancel
-                        </button>
-                        <button class="btn primary">
-                            <i class="fa-solid fa-user-tie"></i> Assign Task to Manager
                         </button>
                     </div>
 
