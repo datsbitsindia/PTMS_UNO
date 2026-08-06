@@ -62,7 +62,7 @@
                 <div class="lineage-item" style="font-size:12px; color:#475569; display:flex; align-items:flex-start; gap:8px;">
                     <i class="fa-solid fa-user-check" style="color:#16a34a; margin-top:2px;"></i>
                     <div>
-                        <b><%= task.creator_name %></b> (Manager) assigned task to original employee on <time style="color:#64748b;"><%= formatDateTime(task.created_at) %></time>
+                        <b><%= task.creator_name %></b> assigned task on <time style="color:#64748b;"><%= formatDateTime(task.created_at) %></time>
                     </div>
                 </div>
                 <% forwardLogs.forEach(f => { %>

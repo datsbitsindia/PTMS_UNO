@@ -31,8 +31,8 @@ exports.list = async (req, res) => {
             baseFilter = '(t.created_by=? AND t.assigned_to!=?)';
             params = [u.id, u.id];
         } else {
-            baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE to_user_id=?))';
-            params = [u.id, u.id];
+            baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+            params = [u.id, u.id, u.id];
         }
     }
 
