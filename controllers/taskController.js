@@ -21,12 +21,19 @@ exports.list = async (req, res) => {
     // Auto sync daily routine tasks for today
     await routineService.syncDailyRoutines();
 
+    const currentView = req.query.view === 'given' ? 'given' : 'assigned';
+
     let baseFilter = '1=1';
     let params = [];
 
     if (u.role === 'employee') {
-        baseFilter = '(t.assigned_to=? OR t.created_by=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-        params = [u.id, u.id, u.id, u.id];
+        if (currentView === 'given') {
+            baseFilter = '(t.created_by=? AND t.assigned_to!=?)';
+            params = [u.id, u.id];
+        } else {
+            baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE to_user_id=?))';
+            params = [u.id, u.id];
+        }
     }
 
     const filters = [baseFilter];
@@ -61,24 +68,12 @@ exports.list = async (req, res) => {
     const managers = [];
     const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') ORDER BY name").all();
     
-    let dailyRoutines = [];
-    if (u.role === 'manager') {
-        dailyRoutines = await db.prepare(`
-            SELECT r.*, p.name project_name, u.name assigned_name 
-            FROM daily_routines r 
-            JOIN projects p ON p.id=r.project_id 
-            JOIN users u ON u.id=r.assigned_to 
-            WHERE r.created_by=? 
-            ORDER BY r.created_at DESC
-        `).all(u.id);
-    }
-
     res.render('tasks', {
         tasks,
         employees,
         managers,
         projects,
-        dailyRoutines,
+        currentView,
         filters: req.query
     });
 };

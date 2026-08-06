@@ -14,11 +14,17 @@
             <a href="/projects" class="<%= page === 'projects' ? 'active' : '' %>">
                 <i class="fa-solid fa-folder-open"></i>Projects
             </a>
+            <a href="/tasks" class="<%= page === 'tasks' ? 'active' : '' %>">
+                <i class="fa-solid fa-check-double"></i>All Tasks
+            </a>
+        <% } else { %>
+            <a href="/tasks?view=assigned" class="<%= page === 'tasks' && (typeof currentView === 'undefined' || currentView === 'assigned') ? 'active' : '' %>">
+                <i class="fa-solid fa-inbox"></i>Assigned Tasks
+            </a>
+            <a href="/tasks?view=given" class="<%= page === 'tasks' && typeof currentView !== 'undefined' && currentView === 'given' ? 'active' : '' %>">
+                <i class="fa-solid fa-paper-plane"></i>Given Tasks
+            </a>
         <% } %>
-
-        <a href="/tasks" class="<%= page === 'tasks' ? 'active' : '' %>">
-            <i class="fa-solid fa-check-double"></i>Tasks
-        </a>
 
         <% if (user.role === 'admin') { %>
             <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">

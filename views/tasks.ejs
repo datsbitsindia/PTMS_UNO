@@ -156,13 +156,11 @@
 
 <section class="ui-panel">
 
-    <div class="uno-task-tabs" style="display:flex; gap:10px; margin-bottom:14px;">
-        <button type="button" class="btn uno-tab active" data-task-tab="assigned" onclick="filterTaskDirection('assigned', this)" style="flex:1; justify-content:center; padding:10px 14px; font-weight:800; border-radius:12px; background:#3b68b7; color:#ffffff;">
-            <i class="fa-solid fa-inbox"></i> Assigned To Me (<span id="assigned-tab-count">0</span>)
-        </button>
-        <button type="button" class="btn uno-tab" data-task-tab="given" onclick="filterTaskDirection('given', this)" style="flex:1; justify-content:center; padding:10px 14px; font-weight:800; border-radius:12px; background:#edf2fa; color:#3b68b7;">
-            <i class="fa-solid fa-paper-plane"></i> Given By Me (<span id="given-tab-count">0</span>)
-        </button>
+    <div class="ui-panel-head" style="margin-bottom:12px;">
+        <h2 style="font-size:17px; font-weight:800; color:#0b1d3a; margin:0;">
+            <i class="fa-solid <%= typeof currentView !== 'undefined' && currentView === 'given' ? 'fa-paper-plane' : 'fa-inbox' %>" style="color:#3b68b7; margin-right:6px;"></i>
+            <%= typeof currentView !== 'undefined' && currentView === 'given' ? 'Tasks Given By Me' : 'Tasks Assigned To Me' %>
+        </h2>
     </div>
 
     <div class="toolbar-ui compact-filter" style="margin-bottom: 16px;">
@@ -251,13 +249,13 @@
 
                 <div class="entity-meta">
                     <small>
-                        <%= Number(t.assigned_to) === Number(user.id) ? 'ASSIGNED BY' : 'ASSIGNED TO' %>
+                        <%= typeof currentView !== 'undefined' && currentView === 'given' ? 'ASSIGNED TO' : 'ASSIGNED BY' %>
                     </small>
 
                     <b>
-                        <%= Number(t.assigned_to) === Number(user.id)
-                            ? t.creator_name
-                            : t.assigned_name
+                        <%= typeof currentView !== 'undefined' && currentView === 'given'
+                            ? t.assigned_name
+                            : t.creator_name
                         %>
                     </b>
                 </div>
@@ -292,55 +290,5 @@
 </section>
 
 <%- include('partials/task-modal') %>
-
-<script>
-let currentTaskDirection = 'assigned';
-function filterTaskDirection(dir, btn) {
-    currentTaskDirection = dir;
-    document.querySelectorAll('.uno-tab').forEach(b => {
-        b.style.background = '#edf2fa';
-        b.style.color = '#3b68b7';
-    });
-    if (btn) {
-        btn.style.background = '#3b68b7';
-        btn.style.color = '#ffffff';
-    }
-    const currentUserId = <%= user.id %>;
-    document.querySelectorAll('.task-card').forEach(card => {
-        const assignedTo = Number(card.dataset.assignedTo);
-        const createdBy = Number(card.dataset.createdBy);
-        
-        let matchesDirection = false;
-        if (dir === 'assigned') {
-            matchesDirection = (assignedTo === currentUserId);
-        } else if (dir === 'given') {
-            matchesDirection = (createdBy === currentUserId && assignedTo !== currentUserId);
-        }
-        
-        if (matchesDirection) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-document.addEventListener('DOMContentLoaded', () => {
-    const currentUserId = <%= user.id %>;
-    let assignedCount = 0;
-    let givenCount = 0;
-    document.querySelectorAll('.task-card').forEach(card => {
-        const assignedTo = Number(card.dataset.assignedTo);
-        const createdBy = Number(card.dataset.createdBy);
-        if (assignedTo === currentUserId) assignedCount++;
-        if (createdBy === currentUserId && assignedTo !== currentUserId) givenCount++;
-    });
-    const assignedSpan = document.getElementById('assigned-tab-count');
-    const givenSpan = document.getElementById('given-tab-count');
-    if (assignedSpan) assignedSpan.textContent = assignedCount;
-    if (givenSpan) givenSpan.textContent = givenCount;
-    
-    filterTaskDirection('assigned', document.querySelector('.uno-tab[data-task-tab="assigned"]'));
-});
-</script>
 
 <%- include('partials/foot') %>
