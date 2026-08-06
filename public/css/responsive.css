@@ -5,8 +5,8 @@
   .dark{background:#0f172a}
   .app{padding-bottom:76px;min-height:100vh}
   .main{margin-left:0;width:100%;min-width:0}
-  .topbar{height:64px;padding:0 14px;gap:10px;background:rgba(255,255,255,.96);box-shadow:0 1px 10px rgba(15,23,42,.06);border-bottom:1px solid #e2e8f0;backdrop-filter:blur(10px);display:flex;align-items:center}
-  .dark .topbar{background:rgba(30,41,59,.96)}
+  .topbar{height:64px;padding:0 14px;gap:10px;background:rgb(205 224 253);box-shadow:1px -2px 5px #d3e3fd;border-bottom:1px solid #e2e6eb;backdrop-filter:blur(10px);display:flex;align-items:center}
+  .dark .topbar{background:rgb(205 224 253)}
   .topbar-user{margin-right:auto;display:flex;flex-direction:column;min-width:0}
   .topbar-user strong{font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .topbar-user small{font-size:10px;letter-spacing:.04em;color:var(--muted)}
