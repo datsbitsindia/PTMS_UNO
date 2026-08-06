@@ -10,9 +10,11 @@
             </a>
         <% } %>
 
-        <a href="/projects" class="<%= page === 'projects' ? 'active' : '' %>">
-            <i class="fa-solid fa-folder-open"></i>Projects
-        </a>
+        <% if (user.role === 'admin') { %>
+            <a href="/projects" class="<%= page === 'projects' ? 'active' : '' %>">
+                <i class="fa-solid fa-folder-open"></i>Projects
+            </a>
+        <% } %>
 
         <a href="/tasks" class="<%= page === 'tasks' ? 'active' : '' %>">
             <i class="fa-solid fa-check-double"></i>Tasks
