@@ -185,6 +185,9 @@ exports.save = async (req, res) => {
     if (id) {
         const existingTask = await db.prepare('SELECT * FROM tasks WHERE id=?').get(id);
         if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
+        if (existingTask.created_by !== req.session.user.id) {
+            return res.status(403).render('error', { message: 'Only the employee who created/assigned this task can edit it.' });
+        }
 
         await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=? WHERE id=?').run(
             pid, title, description, priority, due_date || null, assigned_to, Number(estimated_hours) || 0, id
@@ -317,8 +320,8 @@ exports.remove = async (req, res) => {
     const task = await db.prepare(query + ' WHERE t.id=?').get(taskId);
     if (!task) return res.status(404).render('error', { message: 'Task not found' });
     
-    if (req.session.user.role !== 'admin' && req.session.user.id !== task.created_by && req.session.user.id !== task.manager_id) {
-        return res.status(403).render('error', { message: 'Only the task creator or admin can delete this task' });
+    if (req.session.user.id !== task.created_by) {
+        return res.status(403).render('error', { message: 'Only the employee who created/assigned this task can delete it.' });
     }
 
     // Delete comments & attachments
