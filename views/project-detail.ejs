@@ -48,48 +48,7 @@
     <p class="description"><%= project.description || 'No detailed description provided.' %></p>
 </section>
 
-<section class="panel" style="margin-top:10px">
-    <div class="panel-head">
-        <h2>Manager daily updates</h2>
-    </div>
-    <div class="comments" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
-        <% updates.forEach(x=>{ %>
-            <article>
-                <div class="avatar"><%= x.manager_name.charAt(0) %></div>
-                <div>
-                    <header>
-                        <b><%= x.manager_name %> · <%= x.progress_percent %>% complete</b>
-                        <time><%= formatDateTime(x.created_at) %></time>
-                    </header>
-                    <p><%= x.message %></p>
-                </div>
-            </article>
-        <% }) %>
-        <% if(!updates.length){ %>
-            <p class="muted">No manager updates yet.</p>
-        <% } %>
-    </div>
-</section>
 
-<% if(user.role==='manager'){ %>
-    <section class="panel" style="margin-top:10px">
-        <h2>Add daily project update</h2>
-        <p class="muted" style="text-align:left">Tell the admin what was completed today and the current overall progress.</p>
-        <form action="/projects/<%= project.id %>/updates" method="post" class="form-grid">
-            <label class="full">
-                Today's completed work / update
-                <textarea name="message" rows="4" required placeholder="Example: Product listing page completed, Amazon account verification is pending..."></textarea>
-            </label>
-            <label>
-                Overall progress (%)
-                <input type="number" name="progress_percent" min="0" max="100" required>
-            </label>
-            <div class="actions">
-                <button class="btn primary">Send update to admin</button>
-            </div>
-        </form>
-    </section>
-<% } %>
 
 <% if(user.role==='admin' || user.role==='manager'){ %>
     <section class="panel" style="margin-top:10px">
