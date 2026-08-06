@@ -46,16 +46,25 @@ exports.save = async (req, res) => {
         const existing = await db.prepare('SELECT * FROM projects WHERE id=?').get(id);
         if (!existing) return res.status(404).render('error', { message: 'Project not found' });
 
-        await db.prepare('UPDATE projects SET name=?,description=?,start_date=?,end_date=?,manager_id=? WHERE id=?').run(
-            name, description, start_date || null, end_date || null, mgrId, id
+        await db.prepare('UPDATE projects SET name=?,description=?,manager_id=? WHERE id=?').run(
+            name, description, mgrId, id
         );
         await activity.log(req.session.user.id, 'Project Updated', name);
         res.redirect(`/projects/${id}`);
     } else {
-        const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,status,created_by,manager_id) VALUES(?,?,?,?,?,?,?)').run(name, description, start_date || null, end_date || null, 'In Progress', req.session.user.id, mgrId);
+        const result = await db.prepare('INSERT INTO projects(name,description,status,created_by,manager_id) VALUES(?,?,?,?,?)').run(name, description, 'In Progress', req.session.user.id, mgrId);
         await activity.log(req.session.user.id, 'Project Created', name);
         res.redirect('/projects');
     }
+};
+exports.remove = async (req, res) => {
+    const id = req.params.id;
+    if (req.session.user.role !== 'admin') return res.status(403).render('error', { message: 'Only admin can delete projects.' });
+    await db.prepare('UPDATE tasks SET project_id=NULL WHERE project_id=?').run(id);
+    await db.prepare('DELETE FROM project_updates WHERE project_id=?').run(id);
+    await db.prepare('DELETE FROM projects WHERE id=?').run(id);
+    await activity.log(req.session.user.id, 'Project Deleted', `Project ID ${id}`);
+    res.redirect('/projects');
 };
 exports.detail = async (req, res) => {
     const u = req.session.user;

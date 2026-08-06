@@ -11,41 +11,32 @@
 <% const backUrl = user.role === 'admin' ? '/projects' : '/dashboard'; %>
 
 <div class="page-head project-hero">
-    <div class="project-hero-top">
+    <div class="project-hero-top" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
         <h1><%= project.name %></h1>
-        <% if (user.role === 'admin' || user.role === 'manager') { %>
-            <button type="button" class="hero-icon-pen-btn" data-open="edit-project-modal" title="Edit Project">
-                <i class="fa-solid fa-pen"></i>
-            </button>
+        <% if (user.role === 'admin') { %>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" class="btn btn-sm" style="background:#ffffff; color:#3b68b7; border-radius:8px; font-weight:700;" data-open="edit-project-modal" title="Edit Project">
+                    <i class="fa-solid fa-pen"></i> Edit
+                </button>
+                <form action="/projects/<%= project.id %>/delete" method="post" onsubmit="return confirm('Delete project <%= project.name %>? All associated tasks will be unlinked.')" style="margin:0;display:inline;">
+                    <button type="submit" class="btn btn-sm danger-btn" style="border-radius:8px; font-weight:700;">
+                        <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
         <% } %>
     </div>
     
     <div class="project-hero-meta">
         <div>
-            <small>Assigned By</small>
-            <b><%= project.creator_name %></b>
-        </div>
-        <div>
-            <small>Manager</small>
-            <b><%= project.manager_name %></b>
-        </div>
-        <div>
             <small>Assigned On</small>
             <b><%= formatDate(project.created_at) %></b>
         </div>
         <div>
-            <small>Start Date</small>
-            <b><%= formatDate(project.start_date) %></b>
-        </div>
-        <div>
-            <small>Due Date</small>
-            <b><%= formatDate(project.end_date) %></b>
-        </div>
-        <div>
             <small>Status</small>
             <div>
-                <span class="status-chip <%= project.is_overdue ? 'overdue' : String(project.status).toLowerCase().replaceAll(' ', '-') %>">
-                    <%= project.is_overdue ? 'Overdue' : project.status %>
+                <span class="status-chip <%= String(project.status).toLowerCase().replaceAll(' ', '-') %>">
+                    <%= project.status %>
                 </span>
             </div>
         </div>
@@ -155,23 +146,7 @@
                 </div>
                 <textarea name="description" rows="5" required><%= project.description || '' %></textarea>
             </label>
-            <label>Start date
-                <input type="date" name="start_date" value="<%= project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : '' %>" required>
-            </label>
-            <label>Due date
-                <input type="date" name="end_date" value="<%= project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : '' %>" required>
-            </label>
-            <% if (user.role === 'admin') { %>
-                <label class="full">Assign manager
-                    <select name="manager_id" required>
-                        <% (typeof managers !== 'undefined' ? managers : []).forEach(m => { %>
-                            <option value="<%= m.id %>" <%= project.manager_id === m.id ? 'selected' : '' %>><%= m.name %></option>
-                        <% }) %>
-                    </select>
-                </label>
-            <% } else { %>
-                <input type="hidden" name="manager_id" value="<%= project.manager_id %>">
-            <% } %>
+            <input type="hidden" name="manager_id" value="<%= project.manager_id %>">
             <div class="full actions">
                 <button type="button" class="btn" data-close>Cancel</button>
                 <button class="btn primary">Save Project Changes</button>
