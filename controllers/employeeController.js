@@ -8,24 +8,49 @@ exports.list = async (req, res) => {
 };
 
 exports.save = async (req, res) => {
-    const { id, name, email, phone = '', department = '', designation = '', password = '' } = req.body;
-    if (!name || !email) return res.status(400).render('error', { message: 'Name and email are required' });
+    const { id, name = '', email = '', phone = '', department = '', designation = '', password = '' } = req.body;
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanName || !cleanEmail) {
+        return res.status(400).render('error', { message: 'Name and email are required fields.' });
+    }
+
     try {
+        // Check unique name across all users
+        const nameDuplicate = id
+            ? await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?) AND id <> ?").get(cleanName.toLowerCase(), id)
+            : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?)").get(cleanName.toLowerCase());
+
+        if (nameDuplicate) {
+            return res.status(400).render('error', { message: `An employee or user with the name "${cleanName}" already exists. Name must be unique.` });
+        }
+
+        // Check unique email across all users
+        const emailDuplicate = id
+            ? await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(?) AND id <> ?").get(cleanEmail, id)
+            : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(?)").get(cleanEmail);
+
+        if (emailDuplicate) {
+            return res.status(400).render('error', { message: `An employee or user with the email "${cleanEmail}" already exists. Email must be unique.` });
+        }
+
         if (id) {
             if (password) {
-                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=?,password=? WHERE id=? AND role='employee'").run(name, email.toLowerCase(), phone, department, designation, await bcrypt.hash(password, 12), id);
+                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=?,password=? WHERE id=? AND role='employee'").run(cleanName, cleanEmail, phone, department, designation, await bcrypt.hash(password, 12), id);
             } else {
-                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=? WHERE id=? AND role='employee'").run(name, email.toLowerCase(), phone, department, designation, id);
+                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=? WHERE id=? AND role='employee'").run(cleanName, cleanEmail, phone, department, designation, id);
             }
-            await activity.log(req.session.user.id, 'Employee Updated', name);
+            await activity.log(req.session.user.id, 'Employee Updated', cleanName);
         } else {
-            if (!password) return res.status(400).render('error', { message: 'Password is required' });
-            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation) VALUES('employee',?,?,?,?,?,?)").run(name, email.toLowerCase(), await bcrypt.hash(password, 12), phone, department, designation);
-            await activity.log(req.session.user.id, 'Employee Created', name);
+            if (!password) return res.status(400).render('error', { message: 'Password is required for new employee.' });
+            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation) VALUES('employee',?,?,?,?,?,?)").run(cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, department, designation);
+            await activity.log(req.session.user.id, 'Employee Created', cleanName);
         }
         res.redirect('/employees');
     } catch (e) {
-        res.status(400).render('error', { message: 'Email already exists or input is invalid' });
+        console.error('Error saving employee:', e);
+        res.status(400).render('error', { message: 'Could not save employee. Please make sure name and email are unique.' });
     }
 };
 
@@ -60,24 +85,49 @@ exports.remove = async (req, res) => {
 exports.managerList = async (req, res) => res.render('managers', { managers: await db.prepare("SELECT * FROM users WHERE role='manager' ORDER BY name").all() });
 
 exports.managerSave = async (req, res) => {
-    const { id, name, email, password = '', phone = '', department = '', designation = 'Manager' } = req.body;
-    if (!name || !email) return res.status(400).render('error', { message: 'Name and email are required' });
+    const { id, name = '', email = '', password = '', phone = '', department = '', designation = 'Manager' } = req.body;
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanName || !cleanEmail) {
+        return res.status(400).render('error', { message: 'Name and email are required fields.' });
+    }
+
     try {
+        // Check unique name across all users
+        const nameDuplicate = id
+            ? await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?) AND id <> ?").get(cleanName.toLowerCase(), id)
+            : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?)").get(cleanName.toLowerCase());
+
+        if (nameDuplicate) {
+            return res.status(400).render('error', { message: `A manager or user with the name "${cleanName}" already exists. Name must be unique.` });
+        }
+
+        // Check unique email across all users
+        const emailDuplicate = id
+            ? await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(?) AND id <> ?").get(cleanEmail, id)
+            : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(?)").get(cleanEmail);
+
+        if (emailDuplicate) {
+            return res.status(400).render('error', { message: `A manager or user with the email "${cleanEmail}" already exists. Email must be unique.` });
+        }
+
         if (id) {
             if (password) {
-                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=?,password=? WHERE id=? AND role='manager'").run(name, email.toLowerCase(), phone, department, designation, await bcrypt.hash(password, 12), id);
+                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=?,password=? WHERE id=? AND role='manager'").run(cleanName, cleanEmail, phone, department, designation, await bcrypt.hash(password, 12), id);
             } else {
-                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=? WHERE id=? AND role='manager'").run(name, email.toLowerCase(), phone, department, designation, id);
+                await db.prepare("UPDATE users SET name=?,email=?,phone=?,department=?,designation=? WHERE id=? AND role='manager'").run(cleanName, cleanEmail, phone, department, designation, id);
             }
-            await activity.log(req.session.user.id, 'Manager Updated', name);
+            await activity.log(req.session.user.id, 'Manager Updated', cleanName);
         } else {
-            if (!password) return res.status(400).render('error', { message: 'Password is required for new manager' });
-            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,created_by) VALUES('manager',?,?,?,?,?,?,?)").run(name, email.toLowerCase(), await bcrypt.hash(password, 12), phone, department, designation, req.session.user.id);
-            await activity.log(req.session.user.id, 'Manager Created', name);
+            if (!password) return res.status(400).render('error', { message: 'Password is required for new manager.' });
+            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,created_by) VALUES('manager',?,?,?,?,?,?,?)").run(cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, department, designation, req.session.user.id);
+            await activity.log(req.session.user.id, 'Manager Created', cleanName);
         }
         res.redirect('/managers');
     } catch (e) {
-        res.status(400).render('error', { message: 'Email already exists or input is invalid' });
+        console.error('Error saving manager:', e);
+        res.status(400).render('error', { message: 'Could not save manager. Please make sure name and email are unique.' });
     }
 };
 
@@ -106,4 +156,3 @@ exports.managerRemove = async (req, res) => {
         res.status(500).render('error', { message: 'Could not delete manager: ' + e.message });
     }
 };
-
