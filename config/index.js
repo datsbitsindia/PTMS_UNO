@@ -12,7 +12,7 @@ module.exports = {
     cookieSecure: process.env.SESSION_COOKIE_SECURE === 'true',
     root,
     tablePrefix: process.env.TABLE_PREFIX || 'uno_',
-    uploadDir: path.join(process.env.DATAEVOL_DATA_DIR || root, 'uploads'),
+    uploadDir: process.env.DATAEVOL_DATA_DIR ? path.join(process.env.DATAEVOL_DATA_DIR, 'uploads') : path.join(root, 'uploads'),
     mysql: {
         host: process.env.DB_HOST || 'localhost',
         port: Number(process.env.DB_PORT) || 3306,
