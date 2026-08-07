@@ -1,0 +1,310 @@
+<%- include('partials/head', { title: (note.title || 'Untitled Note') + ' - Task Manager' }) %>
+<%- include('partials/nav') %>
+
+<style>
+.note-editor-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: calc(100vh - 140px);
+}
+
+.note-editor-topbar {
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.save-status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 99px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.save-status-saved {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.save-status-saving {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.save-status-error {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.notes-toolbar {
+    padding: 10px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.note-tool-btn {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s ease;
+}
+
+.note-tool-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.note-editor-body {
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+html body input#note-title-input.note-title-field,
+html body input.note-title-field,
+html body .note-title-field,
+.note-title-field {
+    width: 100% !important;
+    border: none !important;
+    border-style: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    background: transparent !important;
+    padding: 4px 0 !important;
+    border-radius: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+html body input#note-title-input.note-title-field:focus,
+html body input.note-title-field:focus,
+html body .note-title-field:focus,
+.note-title-field:focus {
+    border: none !important;
+    border-style: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.note-details-field {
+    width: 100% !important;
+    flex: 1 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    outline: none !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: #334155 !important;
+    background: #ffffff !important;
+    resize: vertical !important;
+    font-family: inherit !important;
+    min-height: 380px !important;
+    padding: 14px !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.note-details-field:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+</style>
+
+<div class="note-editor-card">
+    <!-- Top Action Bar -->
+    <div class="note-editor-topbar">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <a href="/notes" class="btn outline btn-sm" style="font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Notes
+            </a>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <form action="/notes/<%= note.id %>/delete" method="post" style="margin:0;" onsubmit="return confirm('Delete this note permanently?')">
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:12px; font-weight:700; border-radius:8px; padding:6px 12px;">
+                    <i class="fa-solid fa-trash-can"></i> Delete Note
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Formatting Toolbar -->
+    <div class="notes-toolbar">
+        <button type="button" class="note-tool-btn" onclick="insertFormat('• ')" title="Add bullet point">
+            <i class="fa-solid fa-list-ul"></i> Bullet
+        </button>
+        <button type="button" class="note-tool-btn" onclick="insertFormat('   - ')" title="Add sub-bullet">
+            <i class="fa-solid fa-indent"></i> Sub-bullet
+        </button>
+        <button type="button" class="note-tool-btn" onclick="insertFormat('[ ] ')" title="Add checklist item">
+            <i class="fa-solid fa-square-check"></i> Checklist
+        </button>
+        <button type="button" class="note-tool-btn" onclick="insertFormat('\n---\n')" title="Add horizontal line divider">
+            <i class="fa-solid fa-minus"></i> Divider
+        </button>
+    </div>
+
+    <!-- Editor Body -->
+    <div class="note-editor-body">
+        <input 
+            type="text" 
+            id="note-title-input" 
+            class="note-title-field" 
+            value="<%= note.title || '' %>" 
+            placeholder="Enter Note Title..."
+            autocomplete="off"
+        >
+        <textarea 
+            id="note-details-input" 
+            class="note-details-field" 
+            placeholder="Type your note details, ideas, or to-do list here..."
+        ><%= note.details || '' %></textarea>
+    </div>
+</div>
+
+<script>
+(function() {
+    const noteId = <%= note.id %>;
+    const titleInput = document.getElementById('note-title-input');
+    const detailsInput = document.getElementById('note-details-input');
+    const statusIndicator = document.getElementById('save-status-indicator');
+
+    let saveTimer = null;
+    let hasUnsavedChanges = false;
+
+    function setStatus(type, message) {
+        // Silent auto-save in background
+    }
+
+    async function autoSave() {
+        if (!noteId) return;
+        const title = titleInput.value;
+        const details = detailsInput.value;
+
+        setStatus('saving');
+
+        try {
+            const res = await fetch('/notes/' + noteId + '/auto-save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, details })
+            });
+            const data = await res.json();
+            if (data.success) {
+                hasUnsavedChanges = false;
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                setStatus('saved', 'at ' + timeStr);
+            } else {
+                setStatus('error');
+            }
+        } catch (err) {
+            console.error('Auto-save request failed:', err);
+            setStatus('error');
+        }
+    }
+
+    function scheduleAutoSave() {
+        hasUnsavedChanges = true;
+        setStatus('saving');
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            autoSave();
+        }, 500);
+    }
+
+    // Event Listeners for Input & Blur
+    if (titleInput) {
+        titleInput.addEventListener('input', scheduleAutoSave);
+        titleInput.addEventListener('blur', () => {
+            if (hasUnsavedChanges) autoSave();
+        });
+    }
+
+    if (detailsInput) {
+        detailsInput.addEventListener('input', scheduleAutoSave);
+        detailsInput.addEventListener('blur', () => {
+            if (hasUnsavedChanges) autoSave();
+        });
+    }
+
+    // Auto-Save on Page Leave / Tab Switch
+    function autoSaveOnLeave() {
+        if (hasUnsavedChanges && noteId) {
+            const title = titleInput.value;
+            const details = detailsInput.value;
+            const payload = JSON.stringify({ title, details });
+
+            if (navigator.sendBeacon) {
+                const blob = new Blob([payload], { type: 'application/json' });
+                navigator.sendBeacon('/notes/' + noteId + '/auto-save', blob);
+            } else {
+                fetch('/notes/' + noteId + '/auto-save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload,
+                    keepalive: true
+                });
+            }
+            hasUnsavedChanges = false;
+        }
+    }
+
+    window.addEventListener('beforeunload', autoSaveOnLeave);
+    window.addEventListener('pagehide', autoSaveOnLeave);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            autoSaveOnLeave();
+        }
+    });
+
+    // Formatting Toolbar Function
+    window.insertFormat = function(syntax) {
+        if (!detailsInput) return;
+        const start = detailsInput.selectionStart;
+        const end = detailsInput.selectionEnd;
+        const val = detailsInput.value;
+
+        detailsInput.value = val.substring(0, start) + syntax + val.substring(end);
+        detailsInput.selectionStart = detailsInput.selectionEnd = start + syntax.length;
+        detailsInput.focus();
+        scheduleAutoSave();
+    };
+})();
+</script>
+
+<%- include('partials/foot') %>

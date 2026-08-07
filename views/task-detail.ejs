@@ -8,25 +8,31 @@
 
 <section class="panel task-detail-card">
     <div class="task-detail-header">
-        <a href="/tasks" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to tasks</a>
+        <a href="<%= user.role === 'admin' ? '/updates' : '/tasks' %>" class="back-link"><i class="fa-solid fa-arrow-left"></i> <%= user.role === 'admin' ? 'Back to updates' : 'Back to tasks' %></a>
         <div class="task-title-group">
             <h2><%= task.title %></h2>
             <span class="project-tag"><i class="fa-solid fa-folder-open"></i> <%= task.project_name||'No project' %></span>
         </div>
         <div class="task-action-row">
+            <% if (task.is_self_task || String(task.project_name).toLowerCase() === 'self task' || Number(task.created_by) === Number(task.assigned_to)) { %>
+                <span class="task-action-pill" style="background:#e0e7ff;color:#4338ca;border-color:#c7d2fe;font-weight:700;">
+                    <i class="fa-solid fa-user-check"></i> Self Task
+                </span>
+            <% } %>
             <span class="task-action-pill priority-pill <%= task.priority.toLowerCase() %>"><%= task.priority %> Priority</span>
             <% if (task.is_forwarded) { %>
                 <span class="task-action-pill forwarded-pill" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;">
                     <i class="fa-solid fa-share"></i> Forwarded
                 </span>
             <% } %>
-            <% if (task.assigned_to === user.id || task.created_by === user.id) { %>
+            <% if (user.role !== 'admin' && (task.assigned_to === user.id || task.created_by === user.id)) { %>
                 <button type="button" class="task-action-pill forward-pill" style="background:#d3e3fd;color:#0b2d68;border-color:#bae0fd;" data-open="forward-task-modal">
                     <i class="fa-solid fa-share"></i> Re-assign / Forward Task
                 </button>
             <% } %>
 
-            <% if (task.created_by === user.id) { %>
+            <% const canEditOrDelete = user.role !== 'admin' && (task.created_by === user.id || task.manager_id === user.id || task.assigned_to === user.id); %>
+            <% if (canEditOrDelete) { %>
                 <button type="button" class="task-action-pill edit-pill" data-open="edit-task-modal">
                     <i class="fa-solid fa-pen"></i> Edit Task
                 </button>
@@ -62,7 +68,7 @@
                 <div class="lineage-item" style="font-size:12px; color:#475569; display:flex; align-items:flex-start; gap:8px;">
                     <i class="fa-solid fa-user-check" style="color:#16a34a; margin-top:2px;"></i>
                     <div>
-                        <b><%= task.creator_name %></b> assigned task on <time style="color:#64748b;"><%= formatDateTime(task.created_at) %></time>
+                        <b><%= task.creator_name %></b> (Manager) assigned task to original employee on <time style="color:#64748b;"><%= formatDateTime(task.created_at) %></time>
                     </div>
                 </div>
                 <% forwardLogs.forEach(f => { %>
@@ -168,7 +174,7 @@
     </div>
 </div>
 
-<% if(user.role==='manager'||user.role==='admin'){ %>
+<% if (typeof canEditOrDelete !== 'undefined' && canEditOrDelete) { %>
     <div class="modal" id="edit-task-modal">
         <div class="modal-card">
             <button class="modal-close" data-close>&times;</button>
@@ -189,6 +195,7 @@
                 <label class="full">Description
                     <textarea name="description" rows="3"><%= task.description||'' %></textarea>
                 </label>
+                <% if (user.role === 'manager') { %>
                 <label>Assigned Employee
                     <select name="assigned_to" required>
                         <% (typeof employees!=='undefined'?employees:[]).forEach(e=>{ %>
@@ -196,6 +203,9 @@
                         <% }) %>
                     </select>
                 </label>
+                <% } else { %>
+                    <input type="hidden" name="assigned_to" value="<%= task.assigned_to %>">
+                <% } %>
                 <label>Priority
                     <select name="priority">
                         <% ['Low','Medium','High','Critical'].forEach(x=>{ %>

@@ -14,24 +14,26 @@
             <a href="/projects" class="<%= page === 'projects' ? 'active' : '' %>">
                 <i class="fa-solid fa-folder-open"></i>Projects
             </a>
+        <% } %>
+
+        <% if (user.role !== 'admin') { %>
             <a href="/tasks" class="<%= page === 'tasks' ? 'active' : '' %>">
-                <i class="fa-solid fa-check-double"></i>All Tasks
+                <i class="fa-solid fa-check-double"></i>Tasks
             </a>
-        <% } else { %>
-            <a href="/tasks?view=assigned" class="<%= page === 'tasks' && (typeof currentView === 'undefined' || currentView === 'assigned') ? 'active' : '' %>">
-                <i class="fa-solid fa-inbox"></i>Assigned Tasks
-            </a>
-            <a href="/tasks?view=given" class="<%= page === 'tasks' && typeof currentView !== 'undefined' && currentView === 'given' ? 'active' : '' %>">
-                <i class="fa-solid fa-paper-plane"></i>Given Tasks
+        <% } %>
+
+        <% if (user.role === 'manager') { %>
+            <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
+                <i class="fa-solid fa-users"></i>Employees
             </a>
         <% } %>
 
         <% if (user.role === 'admin') { %>
-            <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
-                <i class="fa-solid fa-users"></i>Employees
+            <a href="/managers" class="<%= page === 'managers' ? 'active' : '' %>">
+                <i class="fa-solid fa-user-tie"></i>Managers
             </a>
-            <a href="/activity" class="<%= page === 'activity' ? 'active' : '' %>">
-                <i class="fa-solid fa-clock-rotate-left"></i>Activity Log
+            <a href="/updates" class="<%= page === 'updates' ? 'active' : '' %>">
+                <i class="fa-solid fa-list-check"></i>Updates
             </a>
         <% } %>
 
@@ -40,6 +42,10 @@
             <% if (unread) { %>
                 <b class="badge"><%= unread %></b>
             <% } %>
+        </a>
+
+        <a href="/notes" class="<%= page === 'notes' ? 'active' : '' %>">
+            <i class="fa-solid fa-note-sticky"></i>Notes
         </a>
 
         <a href="/profile" class="<%= page === 'profile' ? 'active' : '' %>">
@@ -60,7 +66,7 @@
         </div>
 
         <div class="topbar-right-group" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-            <% if (page === 'tasks') { %>
+            <% if (page === 'tasks' && user.role !== 'admin') { %>
                 <button class="btn primary btn-sm" data-open="task-modal" style="white-space:nowrap;">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
@@ -69,6 +75,12 @@
             <% if (page === 'employees') { %>
                 <button class="btn primary btn-sm" data-open="employee-modal" style="white-space:nowrap;">
                     <i class="fa-solid fa-user-plus"></i> Add Employee
+                </button>
+            <% } %>
+
+            <% if (page === 'managers' && user.role === 'admin') { %>
+                <button class="btn primary btn-sm" data-open="manager-modal" style="white-space:nowrap;">
+                    <i class="fa-solid fa-user-plus"></i> Add Manager
                 </button>
             <% } %>
 

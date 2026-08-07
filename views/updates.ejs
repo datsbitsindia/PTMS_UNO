@@ -1,0 +1,194 @@
+<%- include('partials/head',{title:'Updates & Reports'}) %>
+<%- include('partials/nav',{page:'updates'}) %>
+
+<style>
+.updates-filter-card {
+    background: #ffffff;
+    border: 1px solid #d3e3fd;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(59,104,183,0.06);
+}
+.date-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.date-tab-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.date-tab-btn:hover {
+    background: #edf2fa;
+    color: #0b2d68;
+}
+.date-tab-btn.active {
+    background: #3b68b7;
+    color: #ffffff;
+    border-color: #3b68b7;
+    box-shadow: 0 4px 12px rgba(59,104,183,0.25);
+}
+.sub-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    align-items: center;
+}
+.custom-date-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    grid-column: 1 / -1;
+    background: #f1f5f9;
+    padding: 10px 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+.role-badge {
+    padding: 3px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+.role-badge.manager {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+.role-badge.employee {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+</style>
+
+<div class="updates-filter-card">
+    <form id="updates-filter-form" method="GET" action="/updates">
+        <input type="hidden" name="date_filter" id="date_filter_input" value="<%= date_filter %>">
+        
+        <!-- Main Date Filter Tabs -->
+        <div class="date-tabs">
+            <button type="button" class="date-tab-btn <%= date_filter === 'today' ? 'active' : '' %>" onclick="setDateFilter('today')">
+                <i class="fa-solid fa-calendar-day"></i> Today Tasks
+            </button>
+            <button type="button" class="date-tab-btn <%= date_filter === 'yesterday' ? 'active' : '' %>" onclick="setDateFilter('yesterday')">
+                <i class="fa-solid fa-calendar-minus"></i> Yesterday Tasks
+            </button>
+            <button type="button" class="date-tab-btn <%= date_filter === 'last_week' ? 'active' : '' %>" onclick="setDateFilter('last_week')">
+                <i class="fa-solid fa-calendar-week"></i> Last Week
+            </button>
+            <button type="button" class="date-tab-btn <%= date_filter === 'custom' ? 'active' : '' %>" onclick="setDateFilter('custom')">
+                <i class="fa-solid fa-calendar-days"></i> Custom Range
+            </button>
+        </div>
+
+        <% if (date_filter === 'custom') { %>
+            <div class="custom-date-group">
+                <label style="font-size:12px; font-weight:700; color:#334155; margin:0;">Start Date:
+                    <input type="date" name="start_date" value="<%= start_date %>" style="padding:4px 8px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;" onchange="this.form.submit()">
+                </label>
+                <label style="font-size:12px; font-weight:700; color:#334155; margin:0;">End Date:
+                    <input type="date" name="end_date" value="<%= end_date %>" style="padding:4px 8px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;" onchange="this.form.submit()">
+                </label>
+            </div>
+        <% } %>
+
+        <!-- Sub Filters -->
+        <div class="sub-filters-grid">
+            <div>
+                <select name="project_id" onchange="this.form.submit()" style="font-size:12px; padding:8px 12px; border-radius:10px;">
+                    <option value="">All Projects (Project-wise)</option>
+                    <% projects.forEach(p => { %>
+                        <option value="<%= p.id %>" <%= String(project_id) === String(p.id) ? 'selected' : '' %>>
+                            <%= p.name %>
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+
+            <div>
+                <select name="status" onchange="this.form.submit()" style="font-size:12px; padding:8px 12px; border-radius:10px;">
+                    <option value="">All Statuses</option>
+                    <option value="Pending" <%= status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                    <option value="In Progress" <%= status === 'In Progress' ? 'selected' : '' %>>In Progress</option>
+                    <option value="Completed" <%= status === 'Completed' ? 'selected' : '' %>>Completed</option>
+                    <option value="Overdue" <%= status === 'Overdue' ? 'selected' : '' %>>Overdue</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<section class="ui-panel">
+    <div class="ui-panel-head">
+        <h2>Manager & Employee Task Updates</h2>
+        <span style="font-weight:700; color:#3b68b7; font-size:13px;"><%= tasks.length %> Task<%= tasks.length === 1 ? '' : 's' %> Found</span>
+    </div>
+
+    <div class="entity-list">
+        <% tasks.forEach(t => { %>
+            <article class="entity-card update-item-card <%= t.is_overdue ? 'overdue-card' : '' %>" data-status="<%= t.status %>" onclick="window.location.href='/tasks/<%= t.id %>'" style="cursor:pointer; padding:9px 14px; margin-bottom:6px; display:flex !important; align-items:center !important; justify-content:space-between !important; width:100% !important; grid-template-columns:none !important; gap:12px;">
+                <div style="flex:1 !important; min-width:0 !important;">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:2px;">
+                        <b style="font-size:14px; color:#0f172a;"><%= t.title %></b>
+                        <% if (t.is_self_task || String(t.project_name).toLowerCase() === 'self task' || Number(t.created_by) === Number(t.assigned_to)) { %>
+                            <span class="self-task-chip" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; padding:2px 6px; border-radius:99px; font-size:9px; font-weight:700; display:inline-flex; align-items:center; gap:3px;">
+                                <i class="fa-solid fa-user-check" style="font-size:9px;"></i> Self Task
+                            </span>
+                        <% } %>
+                        <span class="status-chip <%= t.is_overdue ? 'overdue' : String(t.status).toLowerCase().replaceAll(' ', '-') %>" style="font-size:10px; padding:2px 6px;">
+                            <%= t.is_overdue ? 'Overdue' : t.status %>
+                        </span>
+                        <span class="priority-pill <%= t.priority.toLowerCase() %>" style="font-weight:700; font-size:9px; padding:2px 5px; border-radius:99px;">
+                            <%= t.priority %>
+                        </span>
+                    </div>
+
+                    <div style="font-size:11px; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <b>Assigned To:</b> <%= t.assigned_name %> 
+                        <span class="role-badge <%= t.assigned_role %>" style="font-size:9px; padding:1px 5px;"><%= t.assigned_role %></span>
+                        · <b>Project:</b> <span style="color:#3b68b7; font-weight:700;"><%= t.project_name || 'Self Task' %></span>
+                    </div>
+
+                    <% if (t.description) { %>
+                        <div style="color:#64748b; font-size:10px; margin-top:1px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
+                            <%= t.description %>
+                        </div>
+                    <% } %>
+                </div>
+
+                <div style="display:flex !important; flex-direction:column !important; align-items:flex-end !important; justify-content:center !important; gap:2px; font-size:10px; color:#475569; flex-shrink:0 !important; text-align:right !important; margin-left:auto !important;">
+                    <span><i class="fa-regular fa-calendar" style="color:#3b68b7;"></i> <b>Created:</b> <%= formatDate(t.created_at) %></span>
+                    <span><i class="fa-regular fa-calendar-check" style="color:#16a34a;"></i> <b>Due:</b> <%= formatDate(t.due_date) %></span>
+                </div>
+            </article>
+        <% }) %>
+
+        <% if (!tasks.length) { %>
+            <p class="empty" style="padding:40px 20px;">No task updates found matching the selected filters.</p>
+        <% } %>
+    </div>
+</section>
+
+<script>
+function setDateFilter(val) {
+    document.getElementById('date_filter_input').value = val;
+    document.getElementById('updates-filter-form').submit();
+}
+</script>
+
+<%- include('partials/foot') %>

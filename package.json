@@ -1,7 +1,7 @@
 {
-    "name": "ptms-uno",
-    "productName": "PTMS UNO Enterprise",
-    "version": "1.0.0",
+    "name": "employee-task-manager",
+    "productName": "Dataevol Task Manager",
+    "version": "1.0.18",
     "private": true,
     "description": "Employee task management system (Progressive Web App)",
     "main": "app.js",

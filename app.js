@@ -25,10 +25,13 @@ async function start() {
     }));
     webApp.use(express.urlencoded({
         extended: false,
-        limit: '1mb'
+        limit: '10mb'
     }));
     webApp.use(express.json({
-        limit: '100kb'
+        limit: '10mb'
+    }));
+    webApp.use(express.text({
+        limit: '10mb'
     }));
     webApp.use(express.static(path.join(config.root, 'public'), {
         setHeaders: (res, filePath) => {

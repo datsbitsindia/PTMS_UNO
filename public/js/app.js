@@ -47,11 +47,6 @@ window.applyCompactFilter = function(bar) {
         const checkStatusMatch = (target) => {
             if (!target) return true;
             const cleanTarget = target.replaceAll(' ', '-').toLowerCase();
-            if (cleanTarget === 'given_by_me' || cleanTarget === 'given-by-me') {
-                const cardCreatedBy = Number(card.dataset.createdBy);
-                const currentUserId = window.CURRENT_USER_ID;
-                return cardCreatedBy === currentUserId;
-            }
             if (cleanTarget === 'overdue') {
                 return isOverdue || cardStatus === 'overdue';
             }
@@ -210,16 +205,14 @@ window.filterByKpi = function(filterVal, event) {
     let targetCard = null;
     if (event && event.currentTarget) {
         targetCard = event.currentTarget.closest('.metric-card');
-        if (targetCard) targetCard.classList.add('active-kpi-filter');
     }
 
     const valStr = String(filterVal || '').toLowerCase().trim();
     window.currentKpiFilter = valStr;
     if (bar) bar.dataset.activeKpi = valStr;
 
-    if (searchInput) searchInput.value = '';
-
-    if (!valStr || valStr === 'all' || valStr === 'given_by_me' || valStr === 'given-by-me') {
+    if (!valStr || valStr === 'all') {
+        if (searchInput) searchInput.value = '';
         selects.forEach(s => s.selectedIndex = 0);
         if (!targetCard) {
             targetCard = document.querySelector('.metric-card[onclick*="all"], .metric-card[title*="all"]');
@@ -230,26 +223,58 @@ window.filterByKpi = function(filterVal, event) {
             [...s.options].forEach((opt, idx) => {
                 const optText = opt.text.toLowerCase().trim();
                 const optVal = opt.value.toLowerCase().trim();
-                if (optText === valStr || optVal === valStr || (optText.length > 2 && (optText.includes(valStr) || valStr.includes(optText)))) {
+                if (optText === valStr || optVal === valStr || optText.includes(valStr) || valStr.includes(optText)) {
                     s.selectedIndex = idx;
                     matched = true;
                 }
             });
         });
+        if (!matched && searchInput) {
+            searchInput.value = filterVal;
+        }
 
         if (!targetCard) {
             document.querySelectorAll('.metric-card').forEach(card => {
                 const onclickAttr = (card.getAttribute('onclick') || '').toLowerCase();
+                const hrefAttr = (card.getAttribute('href') || '').toLowerCase();
                 const textContent = card.textContent.toLowerCase();
-                if (onclickAttr.includes(valStr) || textContent.includes(valStr)) {
+                if (onclickAttr.includes(valStr) || hrefAttr.includes(valStr) || textContent.includes(valStr)) {
                     targetCard = card;
                 }
             });
         }
     }
 
-    if (targetCard) targetCard.classList.add('active-kpi-filter');
-    if (bar) window.applyCompactFilter(bar);
+    if (targetCard) {
+        targetCard.classList.add('active-kpi-filter');
+    }
+
+    if (bar) {
+        applyCompactFilter(bar);
+    } else {
+        const cards = document.querySelectorAll('.entity-card, .activity-row');
+        cards.forEach(card => {
+            if (!valStr || valStr === 'all') {
+                card.style.setProperty('display', '', '');
+                card.removeAttribute('hidden');
+                card.hidden = false;
+            } else {
+                const cardStatus = (card.dataset.status || '').toLowerCase();
+                const cardText = card.textContent.toLowerCase();
+                const cleanVal = valStr.replaceAll(' ', '-');
+                const isMatch = cardStatus === valStr || cardStatus === cleanVal || cardStatus.includes(cleanVal) || cardStatus.includes(valStr) || cardText.includes(valStr);
+                if (isMatch) {
+                    card.style.setProperty('display', '', '');
+                    card.removeAttribute('hidden');
+                    card.hidden = false;
+                } else {
+                    card.style.setProperty('display', 'none', 'important');
+                    card.setAttribute('hidden', 'true');
+                    card.hidden = true;
+                }
+            }
+        });
+    }
 };
 
 // Delegate KPI card click events globally

@@ -43,6 +43,11 @@
                             </small>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                            <% if (t.is_self_task || String(t.project_name).toLowerCase() === 'self task' || Number(t.created_by) === Number(t.assigned_to)) { %>
+                                <span class="status-chip self-task" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; padding:3px 8px; border-radius:99px; font-weight:700;">
+                                    <i class="fa-solid fa-user-check"></i> Self Task
+                                </span>
+                            <% } %>
                             <span class="priority-pill <%= t.priority.toLowerCase() %>" style="font-size:10px; padding:3px 8px; border-radius:99px; font-weight:700;">
                                 <i class="fa-solid fa-flag"></i> <%= t.priority %>
                             </span>
@@ -90,7 +95,7 @@
         </div>
         <div class="entity-list">
             <% (typeof projects !== 'undefined' ? projects : []).forEach(p => { %>
-                <article class="entity-card project-card <%= p.is_overdue ? 'overdue-card' : '' %>" data-status="<%= p.status %>" onclick="window.location.href='/projects/<%= p.id %>'" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; gap:12px; grid-template-columns:none!important;">
+                <article class="entity-card project-card <%= p.is_overdue ? 'overdue-card' : '' %>" data-status="<%= p.status %>" onclick="window.location.href='/projects/<%= p.id %>'" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:9px 14px; gap:10px; grid-template-columns:none!important;">
                     <div class="entity-title" style="flex:1; min-width:0;">
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom: 2px;">
                             <a href="/projects/<%= p.id %>" style="font-weight:800; font-size:15px; color:#0f172a; text-decoration:none;" onclick="event.stopPropagation();"><%= p.name %></a>
@@ -99,10 +104,10 @@
                             </span>
                         </div>
                         <small style="color:#64748b; font-size:11px;">Managed by <b><%= p.manager_name %></b> · <%= p.task_count || 0 %> task<%= p.task_count === 1 ? '' : 's' %></small>
-                        <div class="project-inline-dates" style="display:flex; align-items:center; gap:12px; margin-top:4px; font-size:11px; color:#475569; flex-wrap:wrap;">
-                            <span><i class="fa-regular fa-calendar" style="color:#6366f1;"></i> <b>Start:</b> <%= formatDate(p.start_date) %></span>
-                            <span><i class="fa-regular fa-calendar-check" style="color:#16a34a;"></i> <b>Due:</b> <%= formatDate(p.end_date) %></span>
-                        </div>
+                    </div>
+                    <div class="project-inline-dates" style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:10.5px; color:#475569; flex-shrink:0; text-align:right;">
+                        <span><i class="fa-regular fa-calendar" style="color:#6366f1;"></i> <b>Start:</b> <%= formatDate(p.start_date) %></span>
+                        <span><i class="fa-regular fa-calendar-check" style="color:#16a34a;"></i> <b>Due:</b> <%= formatDate(p.end_date) %></span>
                     </div>
                 </article>
             <% }) %>

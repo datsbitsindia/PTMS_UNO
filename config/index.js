@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Kolkata';
 const path = require('path');
 const root = path.join(__dirname, '..');
 require('dotenv').config({
@@ -19,6 +20,8 @@ module.exports = {
         database: process.env.DB_NAME || 'taskmanager',
         waitForConnections: true,
         connectionLimit: 10,
-        multipleStatements: true
+        multipleStatements: true,
+        timezone: '+05:30',
+        dateStrings: true
     }
 };

@@ -17,23 +17,20 @@ const canView = async (u, t) => {
 };
 exports.list = async (req, res) => {
     const u = req.session.user;
+    if (u.role === 'admin') return res.redirect('/projects');
     
     // Auto sync daily routine tasks for today
     await routineService.syncDailyRoutines();
-
-    const currentView = req.query.view === 'given' ? 'given' : 'assigned';
 
     let baseFilter = '1=1';
     let params = [];
 
     if (u.role === 'employee') {
-        if (currentView === 'given') {
-            baseFilter = '(t.created_by=? AND t.assigned_to!=?)';
-            params = [u.id, u.id];
-        } else {
-            baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-            params = [u.id, u.id, u.id];
-        }
+        baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        params = [u.id, u.id, u.id];
+    } else if (u.role === 'manager') {
+        baseFilter = '(p.manager_id=? OR t.created_by=? OR t.assigned_to=? OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        params = [u.id, u.id, u.id, u.id, u.id];
     }
 
     const filters = [baseFilter];
@@ -64,16 +61,30 @@ exports.list = async (req, res) => {
     }
 
     const tasks = await db.prepare(query + " WHERE " + filters.join(' AND ') + " ORDER BY CASE LOWER(t.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
-    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
-    const managers = [];
-    const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') ORDER BY name").all();
+    const employees = u.role === 'manager' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all() : [];
+    const managers = u.role === 'manager' || u.role === 'admin' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
+    const reportingUsers = await db.prepare("SELECT id,name,role,designation FROM users WHERE role IN ('manager','admin') AND active=1 ORDER BY role, name").all();
+    const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') OR name='Self Task' ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
     
+    let dailyRoutines = [];
+    if (u.role === 'manager') {
+        dailyRoutines = await db.prepare(`
+            SELECT r.*, p.name project_name, u.name assigned_name 
+            FROM daily_routines r 
+            JOIN projects p ON p.id=r.project_id 
+            JOIN users u ON u.id=r.assigned_to 
+            WHERE r.created_by=? 
+            ORDER BY r.created_at DESC
+        `).all(u.id);
+    }
+
     res.render('tasks', {
         tasks,
         employees,
         managers,
+        reportingUsers,
         projects,
-        currentView,
+        dailyRoutines,
         filters: req.query
     });
 };
@@ -121,6 +132,10 @@ exports.forward = async (req, res) => {
 
         const task = await db.prepare('SELECT * FROM tasks WHERE id=?').get(taskId);
         if (!task) return res.status(404).render('error', { message: 'Task not found' });
+
+        if (user.role === 'admin') {
+            return res.status(403).render('error', { message: 'Admin can only view tasks. Forwarding is disabled in Updates.' });
+        }
 
         if (user.role === 'employee' && Number(task.assigned_to) !== Number(user.id)) {
             return res.status(403).render('error', { message: 'You can only forward tasks assigned to you.' });
@@ -173,36 +188,88 @@ exports.save = async (req, res) => {
         priority = 'Medium',
         due_date,
         assigned_to,
+        report_to,
         estimated_hours = 0,
         project_id
     } = req.body;
-    const pid = project_id ? Number(project_id) : null;
-    const targetUser = await db.prepare("SELECT id FROM users WHERE id=? AND role IN ('employee', 'manager') AND active=1").get(assigned_to);
+
+    let targetAssignee = assigned_to ? Number(assigned_to) : req.session.user.id;
+    if (req.session.user.role === 'employee' && !assigned_to) {
+        targetAssignee = req.session.user.id;
+    }
+
+    let pid = project_id ? Number(project_id) : null;
+    if (!pid) {
+        const selfTaskProj = await db.prepare("SELECT id FROM projects WHERE name='Self Task' LIMIT 1").get();
+        if (selfTaskProj) pid = selfTaskProj.id;
+    }
+
+    const targetUser = await db.prepare("SELECT id, role, name FROM users WHERE id=? AND active=1").get(targetAssignee);
     if (!title || !targetUser) return res.status(400).render('error', {
         message: 'Valid assignee and task title are required'
     });
 
+    const isSelfTask = Number(targetAssignee) === Number(req.session.user.id) ? 1 : 0;
+    
+    let createdBy = req.session.user.id;
+    if (report_to && Number(report_to)) {
+        createdBy = Number(report_to);
+    }
+
     if (id) {
-        const existingTask = await db.prepare('SELECT * FROM tasks WHERE id=?').get(id);
-        if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
-        if (existingTask.created_by !== req.session.user.id) {
-            return res.status(403).render('error', { message: 'Only the employee who created/assigned this task can edit it.' });
+        if (req.session.user.role === 'admin') {
+            return res.status(403).render('error', { message: 'Admin can only view tasks. Task editing is disabled in Updates.' });
         }
 
-        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=? WHERE id=?').run(
-            pid, title, description, priority, due_date || null, assigned_to, Number(estimated_hours) || 0, id
+        const existingTask = await db.prepare('SELECT t.*, p.manager_id FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE t.id=?').get(id);
+        if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
+
+        const canEdit = req.session.user.id === existingTask.created_by ||
+                        req.session.user.id === existingTask.manager_id ||
+                        req.session.user.id === existingTask.assigned_to;
+
+        if (!canEdit) {
+            return res.status(403).render('error', { message: 'You can only edit tasks created by or assigned to you.' });
+        }
+
+        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
+            pid, title, description, priority, due_date || null, targetAssignee, Number(estimated_hours) || 0, isSelfTask, id
         );
 
         await activity.log(req.session.user.id, 'Task Updated', title);
-        await notifications.notify(assigned_to, `Task Updated: ${req.session.user.name} updated task details for '${title}'`, `/tasks/${id}`);
-        if (existingTask.assigned_to !== Number(assigned_to)) {
-            await notifications.notify(existingTask.assigned_to, `Task Re-assigned: Task '${title}' has been re-assigned to another employee.`, `/tasks`);
+        await notifications.notify(targetAssignee, `Task Updated: ${req.session.user.name} updated task details for '${title}'`, `/tasks/${id}`);
+        if (existingTask.assigned_to !== Number(targetAssignee)) {
+            await notifications.notify(existingTask.assigned_to, `Task Re-assigned: Task '${title}' has been re-assigned.`, `/tasks`);
         }
         res.redirect(`/tasks/${id}`);
     } else {
-        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours) VALUES(?,?,?,?,?,?,?,?,?)').run(pid, title, description, priority, 'Pending', due_date || null, req.session.user.id, assigned_to, Number(estimated_hours) || 0);
-        await activity.log(req.session.user.id, 'Task Assigned', title);
-        await notifications.notify(assigned_to, `New task assigned: ${title}`, `/tasks/${result.lastInsertRowid}`);
+        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?)').run(
+            pid, title, description, priority, 'Pending', due_date || null, createdBy, targetAssignee, Number(estimated_hours) || 0, isSelfTask
+        );
+        await activity.log(req.session.user.id, 'Task Created', title);
+
+        if (report_to && Number(report_to)) {
+            await notifications.notify(
+                Number(report_to),
+                `Self Task Report: ${req.session.user.name} created self-task '${title}' and reported to you.`,
+                `/tasks/${result.lastInsertRowid}`
+            );
+        } else if (req.session.user.role === 'employee') {
+            // Employee self-task creation -> notify Manager
+            const managers = await db.prepare("SELECT id FROM users WHERE role='manager' AND active=1").all();
+            for (const m of managers) {
+                await notifications.notify(m.id, `Self Task Report: Employee ${req.session.user.name} assigned self-task '${title}'`, `/tasks/${result.lastInsertRowid}`);
+            }
+        } else if (req.session.user.role === 'manager' && isSelfTask) {
+            // Manager self-task creation -> notify Admin
+            const admins = await db.prepare("SELECT id FROM users WHERE role='admin' AND active=1").all();
+            for (const a of admins) {
+                await notifications.notify(a.id, `Self Task Report: Manager ${req.session.user.name} self-assigned task '${title}'`, `/updates`);
+            }
+        } else if (!isSelfTask) {
+            await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${result.lastInsertRowid}`);
+        }
+
         res.redirect('/tasks');
     }
 };
@@ -320,8 +387,16 @@ exports.remove = async (req, res) => {
     const task = await db.prepare(query + ' WHERE t.id=?').get(taskId);
     if (!task) return res.status(404).render('error', { message: 'Task not found' });
     
-    if (req.session.user.id !== task.created_by) {
-        return res.status(403).render('error', { message: 'Only the employee who created/assigned this task can delete it.' });
+    if (req.session.user.role === 'admin') {
+        return res.status(403).render('error', { message: 'Admin can only view tasks. Task deletion is disabled in Updates.' });
+    }
+
+    const canDelete = req.session.user.id === task.created_by ||
+                      req.session.user.id === task.manager_id ||
+                      req.session.user.id === task.assigned_to;
+
+    if (!canDelete) {
+        return res.status(403).render('error', { message: 'Only the task creator, manager, or assigned user can delete this task.' });
     }
 
     // Delete comments & attachments
