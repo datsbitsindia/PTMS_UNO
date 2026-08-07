@@ -1,12 +1,19 @@
 function parseISTDate(value) {
     if (!value) return null;
-    if (value instanceof Date) return value;
+    if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
     let str = String(value).trim();
-    if (!str) return null;
-    if (!str.includes('Z') && !str.includes('+') && !str.includes('GMT')) {
+    if (!str || str === '0000-00-00' || str === '0000-00-00 00:00:00') return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        str = str + 'T00:00:00+05:30';
+    } else if (!str.includes('Z') && !str.includes('+') && !str.includes('GMT')) {
         str = str.replace(' ', 'T') + '+05:30';
     }
-    const d = new Date(str);
+
+    let d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+
+    d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
 }
 
