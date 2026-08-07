@@ -11,6 +11,7 @@ module.exports = {
     sessionSecret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
     cookieSecure: process.env.SESSION_COOKIE_SECURE === 'true',
     root,
+    tablePrefix: process.env.TABLE_PREFIX || 'uno_',
     uploadDir: path.join(process.env.DATAEVOL_DATA_DIR || root, 'uploads'),
     mysql: {
         host: process.env.DB_HOST || 'localhost',
