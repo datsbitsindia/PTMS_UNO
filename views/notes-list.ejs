@@ -119,7 +119,7 @@
         <% notes.forEach(n => { %>
             <a href="/notes/<%= n.id %>" class="note-card">
                 <div class="note-card-title"><%= n.title || 'Untitled Note' %></div>
-                <div class="note-card-snippet"><%= n.details ? n.details.substring(0, 100) : 'Empty note...' %></div>
+                <div class="note-card-snippet"><%= n.details ? n.details.replace(/<[^>]*>?/gm, '').substring(0, 100) : 'Empty note...' %></div>
                 <div class="note-card-footer">
                     <span><i class="fa-regular fa-clock"></i> <%= formatDateTime(n.updated_at) %></span>
                 </div>

@@ -54,7 +54,7 @@
 
 <section class="panel">
     <h2>Project details</h2>
-    <p class="description"><%= project.description || 'No detailed description provided.' %></p>
+    <div class="description-content ck-content"><%- project.description || 'No detailed description provided.' %></div>
 </section>
 
 <section class="panel" style="margin-top:10px">
@@ -146,14 +146,8 @@
                 <input name="name" value="<%= project.name %>" required>
             </label>
             <label class="full">
-                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:4px">
-                    <span>Full project details</span>
-                    <div class="textarea-toolbar">
-                        <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'),0)"><i class="fa-solid fa-list-ul"></i> Bullet</button>
-                        <button type="button" class="btn-xs-tool" onclick="insertBullet(this.closest('label').querySelector('textarea'),1)"><i class="fa-solid fa-indent"></i> Sub-bullet</button>
-                    </div>
-                </div>
-                <textarea name="description" rows="5" required><%= project.description || '' %></textarea>
+                <span>Full project details</span>
+                <textarea name="description" class="ck-editor-target" rows="5"><%= project.description || '' %></textarea>
             </label>
             <label>Start date
                 <input type="date" name="start_date" value="<%= project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : '' %>" required>
@@ -182,4 +176,3 @@
 <% } %>
 
 <%- include('partials/foot') %>
-

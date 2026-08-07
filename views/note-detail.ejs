@@ -161,21 +161,7 @@ html body .note-title-field:focus,
         </div>
     </div>
 
-    <!-- Formatting Toolbar -->
-    <div class="notes-toolbar">
-        <button type="button" class="note-tool-btn" onclick="insertFormat('• ')" title="Add bullet point">
-            <i class="fa-solid fa-list-ul"></i> Bullet
-        </button>
-        <button type="button" class="note-tool-btn" onclick="insertFormat('   - ')" title="Add sub-bullet">
-            <i class="fa-solid fa-indent"></i> Sub-bullet
-        </button>
-        <button type="button" class="note-tool-btn" onclick="insertFormat('[ ] ')" title="Add checklist item">
-            <i class="fa-solid fa-square-check"></i> Checklist
-        </button>
-        <button type="button" class="note-tool-btn" onclick="insertFormat('\n---\n')" title="Add horizontal line divider">
-            <i class="fa-solid fa-minus"></i> Divider
-        </button>
-    </div>
+
 
     <!-- Editor Body -->
     <div class="note-editor-body">
@@ -189,7 +175,7 @@ html body .note-title-field:focus,
         >
         <textarea 
             id="note-details-input" 
-            class="note-details-field" 
+            class="note-details-field ck-editor-target" 
             placeholder="Type your note details, ideas, or to-do list here..."
         ><%= note.details || '' %></textarea>
     </div>
@@ -209,10 +195,19 @@ html body .note-title-field:focus,
         // Silent auto-save in background
     }
 
+    if (window.initCKEditor && detailsInput) {
+        window.initCKEditor(detailsInput).then(editor => {
+            if (editor) {
+                window.noteEditor = editor;
+                editor.model.document.on('change:data', scheduleAutoSave);
+            }
+        });
+    }
+
     async function autoSave() {
         if (!noteId) return;
         const title = titleInput.value;
-        const details = detailsInput.value;
+        const details = window.noteEditor ? window.noteEditor.getData() : detailsInput.value;
 
         setStatus('saving');
 
@@ -266,7 +261,7 @@ html body .note-title-field:focus,
     function autoSaveOnLeave() {
         if (hasUnsavedChanges && noteId) {
             const title = titleInput.value;
-            const details = detailsInput.value;
+            const details = window.noteEditor ? window.noteEditor.getData() : detailsInput.value;
             const payload = JSON.stringify({ title, details });
 
             if (navigator.sendBeacon) {
@@ -292,18 +287,6 @@ html body .note-title-field:focus,
         }
     });
 
-    // Formatting Toolbar Function
-    window.insertFormat = function(syntax) {
-        if (!detailsInput) return;
-        const start = detailsInput.selectionStart;
-        const end = detailsInput.selectionEnd;
-        const val = detailsInput.value;
-
-        detailsInput.value = val.substring(0, start) + syntax + val.substring(end);
-        detailsInput.selectionStart = detailsInput.selectionEnd = start + syntax.length;
-        detailsInput.focus();
-        scheduleAutoSave();
-    };
 })();
 </script>
 

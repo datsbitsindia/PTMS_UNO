@@ -48,7 +48,7 @@
     <% if(task.description){ %>
         <div class="task-desc-box">
             <small>Task Description</small>
-            <p><%= task.description %></p>
+            <div class="task-description-content ck-content"><%- task.description %></div>
         </div>
     <% } %>
 
@@ -193,7 +193,7 @@
                     <input name="title" value="<%= task.title %>" required>
                 </label>
                 <label class="full">Description
-                    <textarea name="description" rows="3"><%= task.description||'' %></textarea>
+                    <textarea name="description" class="ck-editor-target" rows="3"><%= task.description||'' %></textarea>
                 </label>
                 <% if (user.role === 'manager') { %>
                 <label>Assigned Employee

@@ -1,4 +1,4 @@
-document.addEventListener('click',event=>{const target=event.target.closest('a,button');if(!target)return;const payload=JSON.stringify({action:target.dataset.audit||target.getAttribute('aria-label')||target.textContent.trim()||target.tagName,text:target.textContent.trim(),href:target.getAttribute('href')||'',page:location.pathname});navigator.sendBeacon('/audit/click',new Blob([payload],{type:'application/json'}));});document.querySelector('.menu-btn')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const id=b.dataset.open,m=document.getElementById(id);if(!m)return;if(id==='task-modal'){const f=document.getElementById('single-task-form');if(f){f.reset();const inp=document.getElementById('task-id-input');if(inp)inp.value='';const h=document.getElementById('task-form-heading');if(h)h.textContent='Assign employee task'}}if(id==='manager-modal'){const f=document.getElementById('manager-form');if(f){f.reset();const inp=document.getElementById('manager-id-input');if(inp)inp.value='';const h=document.getElementById('manager-title');if(h)h.textContent='Add manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Required for new managers'}}m.classList.add('open')});document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});document.getElementById('employee-title').textContent='Edit employee';document.getElementById('employee-modal').classList.add('open')});document.querySelectorAll('.edit-manager').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.manager),f=document.getElementById('manager-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('manager-title');if(t)t.textContent='Edit manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('manager-modal').classList.add('open')});const chart=document.getElementById('statusChart');if(chart){const data=JSON.parse(chart.dataset.values);new Chart(chart,{type:'doughnut',data:{labels:data.map(x=>x.label),datasets:[{data:data.map(x=>x.value),backgroundColor:['#f59e0b','#16a34a','#22c55e','#94a3b8']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
+document.addEventListener('click',event=>{const target=event.target.closest('a,button');if(!target)return;const payload=JSON.stringify({action:target.dataset.audit||target.getAttribute('aria-label')||target.textContent.trim()||target.tagName,text:target.textContent.trim(),href:target.getAttribute('href')||'',page:location.pathname});navigator.sendBeacon('/audit/click',new Blob([payload],{type:'application/json'}));});document.querySelector('.menu-btn')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const id=b.dataset.open,m=document.getElementById(id);if(!m)return;if(id==='task-modal'){const f=document.getElementById('single-task-form');if(f){f.reset();const inp=document.getElementById('task-id-input');if(inp)inp.value='';const h=document.getElementById('task-form-heading');if(h)h.textContent='Assign employee task'}}if(id==='manager-modal'){const f=document.getElementById('manager-form');if(f){f.reset();const inp=document.getElementById('manager-id-input');if(inp)inp.value='';const h=document.getElementById('manager-title');if(h)h.textContent='Add manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Required for new managers'}}m.classList.add('open');if(window.initAllCKEditors)setTimeout(window.initAllCKEditors,100);});document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});document.getElementById('employee-title').textContent='Edit employee';document.getElementById('employee-modal').classList.add('open')});document.querySelectorAll('.edit-manager').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.manager),f=document.getElementById('manager-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('manager-title');if(t)t.textContent='Edit manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('manager-modal').classList.add('open')});const chart=document.getElementById('statusChart');if(chart){const data=JSON.parse(chart.dataset.values);new Chart(chart,{type:'doughnut',data:{labels:data.map(x=>x.label),datasets:[{data:data.map(x=>x.value),backgroundColor:['#f59e0b','#16a34a','#22c55e','#94a3b8']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
 
 function applyCompactFilter(bar){window.applyCompactFilter(bar);}
 window.applyCompactFilter = function(bar) {
@@ -146,24 +146,42 @@ window.closeMobilePwaBanner = function() {
     if (banner) banner.style.display = 'none';
 };
 
-// Bullet Point Helper for Textareas
-window.insertBullet = function(textarea, indentLevel = 0) {
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const prefix = indentLevel === 0 ? '- ' : '  - ';
-    
-    const before = text.substring(0, start);
-    const after = text.substring(end);
-    const needsNewline = start > 0 && !before.endsWith('\n');
-    const insertText = (needsNewline ? '\n' : '') + prefix;
+// CKEditor Helper Initializer (Bold, Numbered List, Bulleted List only)
+window.initCKEditor = function(elementOrSelector) {
+    const el = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
+    if (!el || el.dataset.ckeditorInitialized) return Promise.resolve(null);
+    el.dataset.ckeditorInitialized = "true";
 
-    textarea.value = before + insertText + after;
-    textarea.focus();
-    const newPos = start + insertText.length;
-    textarea.setSelectionRange(newPos, newPos);
+    if (typeof ClassicEditor === 'undefined') return Promise.resolve(null);
+
+    return ClassicEditor
+        .create(el, {
+            toolbar: [ 'bold', 'numberedList', 'bulletedList' ]
+        })
+        .then(editor => {
+            editor.model.document.on('change:data', () => {
+                el.value = editor.getData();
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            el._ckeditor = editor;
+            return editor;
+        })
+        .catch(err => {
+            console.error('CKEditor initialization error:', err);
+            return null;
+        });
 };
+
+window.initAllCKEditors = function() {
+    document.querySelectorAll('textarea.ck-editor-target').forEach(el => {
+        window.initCKEditor(el);
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.initAllCKEditors();
+});
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.tagName === 'TEXTAREA') {
@@ -304,6 +322,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
-
-
