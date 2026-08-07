@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const config = require('../config');
 let pool;
 
-const prefix = config.tablePrefix || 'uno_';
+const prefix = config.tablePrefix || 'dataevol_';
 const names = ['users', 'projects', 'project_updates', 'tasks', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes'];
 
 function sqlName(sql) {
