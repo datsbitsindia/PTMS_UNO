@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const config = require('../config');
 let pool;
 
-const prefix = config.tablePrefix || 'dataevol_';
+const prefix = config.tablePrefix || 'uno_';
 const names = ['users', 'projects', 'project_updates', 'tasks', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes'];
 
 function sqlName(sql) {
@@ -130,35 +130,33 @@ async function createReportingObjects() {
     await pool.query(`CREATE PROCEDURE ${prefix}log_audit(IN p_user_id INT,IN p_event_type VARCHAR(60),IN p_action VARCHAR(150),IN p_description TEXT) INSERT INTO ${prefix}audit_events(user_id,event_type,action,description) VALUES(p_user_id,p_event_type,p_action,p_description)`);
 }
 
-async function ensureUser(role, name, email, password, department, designation) {
-    const existing = await db.prepare('SELECT id FROM users WHERE email=?').get(email);
-    const hash = await bcrypt.hash(password, 12);
-    if (existing) {
-        return existing.id;
-    }
-    return (await db.prepare('INSERT INTO users(role,name,email,password,department,designation) VALUES(?,?,?,?,?,?)').run(role, name, email, hash, department, designation)).lastInsertRowid;
-}
-
 async function seed() {
-    const userCount = await db.prepare('SELECT COUNT(*) as count FROM users').get();
-    if (userCount && userCount.count > 0) {
-        return; // Preserve all existing users in the database! Do not overwrite passwords or seed.
-    }
     if (prefix === 'uno_') {
-        await ensureUser('admin', 'System Admin', 'admin@gmail.com', 'admin@123', 'Management', 'Administrator');
-    } else {
-        const adminId = await ensureUser('admin', 'Chetan', 'chetan@gmail.com', 'chetan', 'Management', 'Administrator');
-        const managerId = await ensureUser('manager', 'Bhavin', 'bhavin@gmail.com', 'bhavin', 'Projects', 'Project Manager');
-        await ensureUser('employee', 'Chintan', 'chintan@gmail.com', 'chintan', 'Engineering', 'Developer');
-        await ensureUser('employee', 'Jemini', 'jemini@gmail.com', 'jemini', 'Engineering', 'Developer');
-        const selfTaskProject = await db.prepare("SELECT id FROM projects WHERE name='Self Task' LIMIT 1").get();
-        if (!selfTaskProject) {
-            await db.prepare("INSERT INTO projects(name,description,start_date,end_date,status,created_by,manager_id) VALUES('Self Task','System project for self-assigned tasks',CURDATE(),'2099-12-31','In Progress',?,?)").run(adminId, adminId);
-        }
-        const project = await db.prepare("SELECT id FROM projects WHERE manager_id=? AND name<>'Self Task' LIMIT 1").get(managerId);
-        if (!project) {
-            await db.prepare("INSERT INTO projects(name,description,start_date,end_date,status,created_by,manager_id) VALUES('ROLEX','Rolex Core Platform','2026-07-01','2026-12-31','In Progress',?,?)").run(adminId, managerId);
-        }
+        const hash = await bcrypt.hash('admin@123', 12);
+        // Truncate all tables in PTMS_UNO database and set single Admin user
+        await pool.query("SET FOREIGN_KEY_CHECKS = 0");
+        try { await pool.query(`TRUNCATE TABLE ${prefix}attachments`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}comments`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}daily_routine_logs`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}daily_routines`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}task_forward_logs`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}tasks`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}project_updates`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}projects`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}notifications`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}activity_logs`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}notes`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}audit_events`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}users`); } catch(e){}
+        try { await pool.query(`TRUNCATE TABLE ${prefix}sessions`); } catch(e){}
+        await pool.query("SET FOREIGN_KEY_CHECKS = 1");
+
+        // Insert single Admin user
+        await pool.query(
+            `INSERT INTO ${prefix}users (role, name, email, password, phone, department, designation, active) VALUES ('admin', 'System Admin', 'admin@gmail.com', ?, '', 'Management', 'Administrator', 1)`,
+            [hash]
+        );
+        return;
     }
 }
 
