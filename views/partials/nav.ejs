@@ -22,7 +22,7 @@
             </a>
         <% } %>
 
-        <% if (user.role === 'manager') { %>
+        <% if (user.role === 'manager' || user.role === 'admin') { %>
             <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
                 <i class="fa-solid fa-users"></i>Employees
             </a>
