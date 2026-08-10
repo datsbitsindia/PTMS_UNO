@@ -59,7 +59,41 @@ function initMasterAutocomplete() {
         });
     });
 }
+window.addAssigneeChip = function(selectEl, containerId) {
+    const val = selectEl.value;
+    if (!val) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const name = opt.dataset.name || opt.text;
+    const role = opt.dataset.role || '';
+
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (container.querySelector(`input[value="${val}"]`)) {
+        selectEl.value = '';
+        return;
+    }
+
+    const chip = document.createElement('span');
+    chip.className = `assignee-chip ${role === 'Manager' ? 'chip-manager' : ''}`;
+    chip.dataset.assigneeId = val;
+    chip.innerHTML = `
+        <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
+        <span>${name}</span>
+        <input type="hidden" name="assigned_to" value="${val}">
+        <span class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</span>
+    `;
+    container.appendChild(chip);
+    selectEl.value = '';
+};
+
+window.removeAssigneeChip = function(btnEl) {
+    const chip = btnEl.closest('.assignee-chip');
+    if (chip) chip.remove();
+};
+
 document.addEventListener('DOMContentLoaded', initMasterAutocomplete);
+
 
 
 function applyCompactFilter(bar){window.applyCompactFilter(bar);}
