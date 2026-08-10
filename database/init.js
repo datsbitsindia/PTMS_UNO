@@ -132,31 +132,16 @@ async function createReportingObjects() {
 
 async function seed() {
     if (prefix === 'uno_') {
+        const [rows] = await pool.query(`SELECT COUNT(*) count FROM ${prefix}users`);
+        if (rows[0] && rows[0].count > 0) {
+            // Users table already has records, do not re-seed or truncate
+            return;
+        }
         const hash = await bcrypt.hash('admin@123', 12);
-        // Truncate all tables in PTMS_UNO database and set single Admin user
-        await pool.query("SET FOREIGN_KEY_CHECKS = 0");
-        try { await pool.query(`TRUNCATE TABLE ${prefix}attachments`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}comments`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}daily_routine_logs`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}daily_routines`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}task_forward_logs`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}tasks`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}project_updates`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}projects`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}notifications`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}activity_logs`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}notes`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}audit_events`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}users`); } catch(e){}
-        try { await pool.query(`TRUNCATE TABLE ${prefix}sessions`); } catch(e){}
-        await pool.query("SET FOREIGN_KEY_CHECKS = 1");
-
-        // Insert single Admin user
         await pool.query(
             `INSERT INTO ${prefix}users (role, name, email, password, phone, department, designation, active) VALUES ('admin', 'System Admin', 'admin@gmail.com', ?, '', 'Management', 'Administrator', 1)`,
             [hash]
         );
-        return;
     }
 }
 
