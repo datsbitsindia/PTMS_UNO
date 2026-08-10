@@ -348,12 +348,14 @@ window.addAssigneeChip = function(selectEl, chipsContainerId) {
         <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
         <span>${name}</span>
         <input type="hidden" name="assigned_to" value="${val}">
-        <button type="button" class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</button>
+        <button type="button" class="chip-remove-btn" tabindex="-1" onclick="removeAssigneeChip(this)">&times;</button>
     `;
 
     container.appendChild(chip);
     selectEl.value = '';
+    selectEl.blur();
 };
+
 
 window.removeAssigneeChip = function(btnEl) {
     const chip = btnEl.closest('.assignee-chip');
