@@ -66,8 +66,9 @@ CREATE TABLE IF NOT EXISTS ${prefix}designations (id INT AUTO_INCREMENT PRIMARY 
         await pool.query(`UPDATE ${prefix}tasks t JOIN (SELECT task_id, GROUP_CONCAT(user_id ORDER BY id SEPARATOR ',') AS all_ids FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) > 1) ta ON ta.task_id = t.id SET t.assigned_to = ta.all_ids`);
     } catch(e) {}
 
-    await addColumn(`${prefix}users`, 'department_id', 'INT NULL AFTER department');
-    await addColumn(`${prefix}users`, 'designation_id', 'INT NULL AFTER designation');
+    await addColumn(`${prefix}users`, 'department_id', 'INT NULL');
+    await addColumn(`${prefix}users`, 'designation_id', 'INT NULL');
+
 
     try {
         const [usersToMigrate] = await pool.query(`SELECT id, department, designation, department_id, designation_id FROM ${prefix}users`);

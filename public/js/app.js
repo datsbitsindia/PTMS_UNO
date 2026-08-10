@@ -167,6 +167,10 @@ window.applyCompactFilter = function(bar) {
 
 document.addEventListener('click',event=>{const btn=event.target.closest('.filter-confirm');if(btn){const bar=btn.closest('.compact-filter');if(bar)window.applyCompactFilter(bar)}});document.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches('.compact-filter input')){event.preventDefault();const bar=event.target.closest('.compact-filter');if(bar)window.applyCompactFilter(bar)}});
 
+document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('employee-title');if(t)t.textContent='Edit Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('employee-modal').classList.add('open')}});
+document.querySelectorAll('.edit-manager').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.manager),f=document.getElementById('manager-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('manager-title');if(t)t.textContent='Edit Manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('manager-modal').classList.add('open')}});
+
+
 document.querySelectorAll('.entity-card').forEach(card=>{const link=card.querySelector('.entity-title a[href^="/tasks/"]');if(!link)return;card.dataset.cardLink=link.href;card.addEventListener('click',event=>{if(event.target.closest('a,button,input,select,form'))return;location.href=link.href})});
 
 // PWA Service Worker Registration & Persistent Session Handling
