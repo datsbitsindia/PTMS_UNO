@@ -9,3 +9,12 @@
 .ck.ck-editor__main>.ck-editor__editable.ck-focused { border-color: #3b68b7 !important; box-shadow: 0 0 0 3px rgba(59, 104, 183, 0.15) !important; }
 .ck-content ul, .ck-content ol { padding-left: 24px !important; margin: 6px 0 !important; }
 .ck-content p { margin: 3px 0 !important; }
+
+/* Multi-Assignee Selection Widget */
+.multi-assignee-picker { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.assignees-chips-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; padding: 2px 0; }
+.assignee-chip { display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.assignee-chip.chip-manager { background: #fae8ff; color: #86198f; border-color: #f0abfc; }
+.assignee-chip.chip-self { background: #dcfce7; color: #166534; border-color: #86efac; }
+.assignee-chip .chip-remove-btn { border: none; background: rgba(0, 0, 0, 0.12); color: inherit; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; line-height: 1; transition: all 0.15s ease; padding: 0; margin-left: 2px; }
+.assignee-chip .chip-remove-btn:hover { background: #ef4444; color: #ffffff; }

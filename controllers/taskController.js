@@ -193,30 +193,19 @@ exports.save = async (req, res) => {
         project_id
     } = req.body;
 
-    let targetAssignee = assigned_to ? Number(assigned_to) : req.session.user.id;
-    if (req.session.user.role === 'employee' && !assigned_to) {
-        targetAssignee = req.session.user.id;
-    }
-
     let pid = project_id ? Number(project_id) : null;
     if (!pid) {
         const selfTaskProj = await db.prepare("SELECT id FROM projects WHERE name='Self Task' LIMIT 1").get();
         if (selfTaskProj) pid = selfTaskProj.id;
     }
 
-    const targetUser = await db.prepare("SELECT id, role, name FROM users WHERE id=? AND active=1").get(targetAssignee);
-    if (!title || !targetUser) return res.status(400).render('error', {
-        message: 'Valid assignee and task title are required'
-    });
-
-    const isSelfTask = Number(targetAssignee) === Number(req.session.user.id) ? 1 : 0;
-    
-    let createdBy = req.session.user.id;
-    if (report_to && Number(report_to)) {
-        createdBy = Number(report_to);
-    }
-
     if (id) {
+        let targetAssignee = Array.isArray(assigned_to) ? Number(assigned_to[0]) : (assigned_to ? Number(assigned_to) : req.session.user.id);
+        const targetUser = await db.prepare("SELECT id, role, name FROM users WHERE id=? AND active=1").get(targetAssignee);
+        if (!title || !targetUser) return res.status(400).render('error', {
+            message: 'Valid assignee and task title are required'
+        });
+
         if (req.session.user.role === 'admin') {
             return res.status(403).render('error', { message: 'Admin can only view tasks. Task editing is disabled in Updates.' });
         }
@@ -232,6 +221,7 @@ exports.save = async (req, res) => {
             return res.status(403).render('error', { message: 'You can only edit tasks created by or assigned to you.' });
         }
 
+        const isSelfTask = Number(targetAssignee) === Number(req.session.user.id) ? 1 : 0;
         await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
             pid, title, description, priority, due_date || null, targetAssignee, Number(estimated_hours) || 0, isSelfTask, id
         );
@@ -243,34 +233,45 @@ exports.save = async (req, res) => {
         }
         res.redirect(`/tasks/${id}`);
     } else {
-        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priority, 'Pending', due_date || null, createdBy, targetAssignee, Number(estimated_hours) || 0, isSelfTask
-        );
-        await activity.log(req.session.user.id, 'Task Created', title);
-
-        if (report_to && Number(report_to)) {
-            await notifications.notify(
-                Number(report_to),
-                `Self Task Report: ${req.session.user.name} created self-task '${title}' and reported to you.`,
-                `/tasks/${result.lastInsertRowid}`
-            );
+        let rawAssignees = [];
+        if (Array.isArray(assigned_to)) {
+            rawAssignees = assigned_to;
+        } else if (assigned_to) {
+            rawAssignees = [assigned_to];
         } else if (req.session.user.role === 'employee') {
-            // Employee self-task creation -> notify Manager
-            const managers = await db.prepare("SELECT id FROM users WHERE role='manager' AND active=1").all();
-            for (const m of managers) {
-                await notifications.notify(m.id, `Self Task Report: Employee ${req.session.user.name} assigned self-task '${title}'`, `/tasks/${result.lastInsertRowid}`);
-            }
-        } else if (req.session.user.role === 'manager' && isSelfTask) {
-            // Manager self-task creation -> notify Admin
-            const admins = await db.prepare("SELECT id FROM users WHERE role='admin' AND active=1").all();
-            for (const a of admins) {
-                await notifications.notify(a.id, `Self Task Report: Manager ${req.session.user.name} self-assigned task '${title}'`, `/updates`);
-            }
-        } else if (!isSelfTask) {
-            await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${result.lastInsertRowid}`);
+            rawAssignees = [req.session.user.id];
         }
 
-        res.redirect('/tasks');
+        const assignees = [...new Set(rawAssignees.map(x => Number(x)).filter(Boolean))];
+        if (!assignees.length) {
+            assignees.push(req.session.user.id);
+        }
+
+        if (!title) return res.status(400).render('error', { message: 'Task title is required' });
+
+        let createdBy = req.session.user.id;
+        if (report_to && Number(report_to)) {
+            createdBy = Number(report_to);
+        }
+
+        let firstTaskId = null;
+        for (const targetAssignee of assignees) {
+            const targetUser = await db.prepare("SELECT id, role, name FROM users WHERE id=? AND active=1").get(targetAssignee);
+            if (!targetUser) continue;
+
+            const isSelfTask = Number(targetAssignee) === Number(req.session.user.id) ? 1 : 0;
+            const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?)').run(
+                pid, title, description, priority, 'Pending', due_date || null, createdBy, targetAssignee, Number(estimated_hours) || 0, isSelfTask
+            );
+
+            if (!firstTaskId) firstTaskId = result.lastInsertRowid;
+            await activity.log(req.session.user.id, 'Task Created', title);
+            if (Number(targetAssignee) !== Number(req.session.user.id)) {
+                await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${result.lastInsertRowid}`);
+            }
+        }
+
+        res.redirect(assignees.length === 1 && firstTaskId ? `/tasks/${firstTaskId}` : '/tasks');
     }
 };
 exports.saveRoutine = async (req, res) => {
@@ -288,38 +289,47 @@ exports.saveRoutine = async (req, res) => {
     } = req.body;
 
     const pid = project_id ? Number(project_id) : null;
-    const employee = await db.prepare("SELECT id FROM users WHERE id=? AND role='employee' AND active=1").get(assigned_to);
+    let rawAssignees = [];
+    if (Array.isArray(assigned_to)) {
+        rawAssignees = assigned_to;
+    } else if (assigned_to) {
+        rawAssignees = [assigned_to];
+    }
+    const assignees = [...new Set(rawAssignees.map(x => Number(x)).filter(Boolean))];
 
-    if (!title || !employee || !start_date || !end_date) {
+    if (!title || !assignees.length || !start_date || !end_date) {
         return res.status(400).render('error', {
-            message: 'Employee, title, start date and end date are required for daily routine task.'
+            message: 'At least one assignee, title, start date and end date are required for daily routine task.'
         });
     }
 
-    await db.prepare(`
-        INSERT INTO daily_routines
-        (project_id, created_by, assigned_to, title, description, priority, estimated_hours, start_date, end_date, daily_time, mandatory, active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(
-        pid,
-        req.session.user.id,
-        assigned_to,
-        title,
-        description,
-        priority,
-        Number(estimated_hours) || 0,
-        start_date,
-        end_date,
-        daily_time,
-        mandatory ? 1 : 0
-    );
+    for (const assigneeId of assignees) {
+        const userObj = await db.prepare("SELECT id FROM users WHERE id=? AND active=1").get(assigneeId);
+        if (!userObj) continue;
 
-    await activity.log(req.session.user.id, 'Daily Routine Created', title);
-    await notifications.notify(assigned_to, `New Daily Routine assigned: ${title} (${start_date} to ${end_date})`, '/tasks');
+        await db.prepare(`
+            INSERT INTO daily_routines
+            (project_id, created_by, assigned_to, title, description, priority, estimated_hours, start_date, end_date, daily_time, mandatory, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        `).run(
+            pid,
+            req.session.user.id,
+            assigneeId,
+            title,
+            description,
+            priority,
+            Number(estimated_hours) || 0,
+            start_date,
+            end_date,
+            daily_time,
+            mandatory ? 1 : 0
+        );
 
-    // Instantly sync tasks so if today falls in range, today's task is created immediately
+        await activity.log(req.session.user.id, 'Daily Routine Created', title);
+        await notifications.notify(assigneeId, `New Daily Routine assigned: ${title} (${start_date} to ${end_date})`, '/tasks');
+    }
+
     await routineService.syncDailyRoutines();
-
     res.redirect('/tasks');
 };
 exports.toggleRoutine = async (req, res) => {

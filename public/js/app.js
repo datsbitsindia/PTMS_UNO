@@ -1,4 +1,4 @@
-document.addEventListener('click',event=>{const target=event.target.closest('a,button');if(!target)return;const payload=JSON.stringify({action:target.dataset.audit||target.getAttribute('aria-label')||target.textContent.trim()||target.tagName,text:target.textContent.trim(),href:target.getAttribute('href')||'',page:location.pathname});navigator.sendBeacon('/audit/click',new Blob([payload],{type:'application/json'}));});document.querySelector('.menu-btn')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const id=b.dataset.open,m=document.getElementById(id);if(!m)return;if(id==='task-modal'){const f=document.getElementById('single-task-form');if(f){f.reset();const inp=document.getElementById('task-id-input');if(inp)inp.value='';const h=document.getElementById('task-form-heading');if(h)h.textContent='Assign employee task'}}if(id==='manager-modal'){const f=document.getElementById('manager-form');if(f){f.reset();const inp=document.getElementById('manager-id-input');if(inp)inp.value='';const h=document.getElementById('manager-title');if(h)h.textContent='Add manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Required for new managers'}}m.classList.add('open');if(window.initAllCKEditors)setTimeout(window.initAllCKEditors,100);});document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});document.getElementById('employee-title').textContent='Edit employee';document.getElementById('employee-modal').classList.add('open')});document.querySelectorAll('.edit-manager').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.manager),f=document.getElementById('manager-form');Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('manager-title');if(t)t.textContent='Edit manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('manager-modal').classList.add('open')});const chart=document.getElementById('statusChart');if(chart){const data=JSON.parse(chart.dataset.values);new Chart(chart,{type:'doughnut',data:{labels:data.map(x=>x.label),datasets:[{data:data.map(x=>x.value),backgroundColor:['#f59e0b','#16a34a','#22c55e','#94a3b8']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
+document.addEventListener('click',event=>{const target=event.target.closest('a,button');if(!target)return;const payload=JSON.stringify({action:target.dataset.audit||target.getAttribute('aria-label')||target.textContent.trim()||target.tagName,text:target.textContent.trim(),href:target.getAttribute('href')||'',page:location.pathname});navigator.sendBeacon('/audit/click',new Blob([payload],{type:'application/json'}));});document.querySelector('.menu-btn')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const id=b.dataset.open,m=document.getElementById(id);if(!m)return;if(id==='task-modal'){const f=document.getElementById('single-task-form');if(f){f.reset();const inp=document.getElementById('task-id-input');if(inp)inp.value='';const h=document.getElementById('task-form-heading');if(h)h.textContent='Assign employee task'}}if(id==='employee-modal'){const f=document.getElementById('employee-form');if(f){f.reset();const inp=f.elements['id'];if(inp)inp.value='';const h=document.getElementById('employee-title');if(h)h.textContent='Add Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Required for new members'}}m.classList.add('open');if(window.initAllCKEditors)setTimeout(window.initAllCKEditors,100);});document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('employee-title');if(t)t.textContent='Edit Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('employee-modal').classList.add('open')}});const chart=document.getElementById('statusChart');if(chart){const data=JSON.parse(chart.dataset.values);new Chart(chart,{type:'doughnut',data:{labels:data.map(x=>x.label),datasets:[{data:data.map(x=>x.value),backgroundColor:['#f59e0b','#16a34a','#22c55e','#94a3b8']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
 
 function applyCompactFilter(bar){window.applyCompactFilter(bar);}
 window.applyCompactFilter = function(bar) {
@@ -315,10 +315,47 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusParam) {
         window.filterByKpi(statusParam);
     } else {
-        // Highlight default total/all card if on a filterable page
         const defaultCard = document.querySelector('.metric-card[onclick*="all"], .metric-card[title*="all"]');
         if (defaultCard && document.querySelector('.compact-filter')) {
             defaultCard.classList.add('active-kpi-filter');
         }
     }
 });
+
+// Multi-Assignee Chip Selection Helpers
+window.addAssigneeChip = function(selectEl, chipsContainerId) {
+    const val = selectEl.value;
+    if (!val) return;
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const name = opt.getAttribute('data-name') || opt.text;
+    const role = opt.getAttribute('data-role') || '';
+    const container = document.getElementById(chipsContainerId);
+    if (!container) return;
+
+    if (container.querySelector(`[data-assignee-id="${val}"]`)) {
+        selectEl.value = '';
+        return;
+    }
+
+    let chipClass = 'assignee-chip';
+    if (role === 'Manager') chipClass += ' chip-manager';
+    if (role === 'Self') chipClass += ' chip-self';
+
+    const chip = document.createElement('span');
+    chip.className = chipClass;
+    chip.setAttribute('data-assignee-id', val);
+    chip.innerHTML = `
+        <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
+        <span>${name}</span>
+        <input type="hidden" name="assigned_to" value="${val}">
+        <button type="button" class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</button>
+    `;
+
+    container.appendChild(chip);
+    selectEl.value = '';
+};
+
+window.removeAssigneeChip = function(btnEl) {
+    const chip = btnEl.closest('.assignee-chip');
+    if (chip) chip.remove();
+};

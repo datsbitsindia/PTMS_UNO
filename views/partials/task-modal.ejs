@@ -71,16 +71,29 @@
                     </label>
 
                     <% if (user.role === 'manager' && typeof employees !== 'undefined') { %>
-                    <label>
-                        Employee / Assignee
-                        <select name="assigned_to" required>
-                            <option value="<%= user.id %>">Assign to Myself (Self Task)</option>
-                            <% employees.forEach(e => { %>
-                                <option value="<%= e.id %>">
-                                    <%= e.name %>
-                                </option>
-                            <% }) %>
-                        </select>
+                    <label class="full">
+                        <span>Assignees / Team Members (Select Multiple)</span>
+                        <div class="multi-assignee-picker">
+                            <div class="assignees-chips-list" id="single-task-assignee-chips"></div>
+                            <select class="assignee-select-dropdown" onchange="addAssigneeChip(this, 'single-task-assignee-chips')">
+                                <option value="">+ Select Employee or Manager to add...</option>
+                                <option value="<%= user.id %>" data-name="<%= user.name %> (Self)" data-role="Self">Assign to Myself (Self Task)</option>
+                                <% if (typeof employees !== 'undefined' && employees.length) { %>
+                                    <optgroup label="Employees">
+                                        <% employees.forEach(e => { %>
+                                            <option value="<%= e.id %>" data-name="<%= e.name %>" data-role="Employee"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
+                                        <% }) %>
+                                    </optgroup>
+                                <% } %>
+                                <% if (typeof managers !== 'undefined' && managers.length) { %>
+                                    <optgroup label="Managers">
+                                        <% managers.filter(m => m.id !== user.id).forEach(m => { %>
+                                            <option value="<%= m.id %>" data-name="<%= m.name %>" data-role="Manager"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
+                                        <% }) %>
+                                    </optgroup>
+                                <% } %>
+                            </select>
+                        </div>
                     </label>
                     <% } else { %>
                         <input type="hidden" name="assigned_to" value="<%= user.id %>">
@@ -172,15 +185,20 @@
                         <textarea name="description" class="ck-editor-target" rows="3" placeholder="Describe the routine tasks employee must perform every morning..."></textarea>
                     </label>
 
-                    <label>
-                        Employee
-                        <select name="assigned_to" required>
-                            <% employees.forEach(e => { %>
-                                <option value="<%= e.id %>">
-                                    <%= e.name %>
-                                </option>
-                            <% }) %>
-                        </select>
+                    <label class="full">
+                        <span>Assignees / Team Members (Select Multiple)</span>
+                        <div class="multi-assignee-picker">
+                            <div class="assignees-chips-list" id="routine-task-assignee-chips"></div>
+                            <select class="assignee-select-dropdown" onchange="addAssigneeChip(this, 'routine-task-assignee-chips')">
+                                <option value="">+ Select Employee or Manager to add...</option>
+                                <% employees.forEach(e => { %>
+                                    <option value="<%= e.id %>" data-name="<%= e.name %>" data-role="Employee"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
+                                <% }) %>
+                                <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
+                                    <option value="<%= m.id %>" data-name="<%= m.name %>" data-role="Manager"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
+                                <% }) %>
+                            </select>
+                        </div>
                     </label>
 
                     <label>
@@ -260,21 +278,17 @@
                         <textarea name="description" class="ck-editor-target" rows="3" placeholder="Provide details, scope, and objectives for the manager..."></textarea>
                     </label>
 
-                    <label>
-                        Assign to Manager
-                        <select name="assigned_to" required>
-                            <option value="">Select Manager...</option>
-                            <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
-                                <option value="<%= m.id %>">
-                                    <%= m.name %> (<%= m.designation || 'Manager' %>)
-                                </option>
-                            <% }) %>
-                            <% if (typeof managers !== 'undefined' && !managers.filter(m => m.id !== user.id).length) { %>
-                                <% managers.forEach(m => { %>
-                                    <option value="<%= m.id %>"><%= m.name %></option>
+                    <label class="full">
+                        <span>Assign Managers (Select Multiple)</span>
+                        <div class="multi-assignee-picker">
+                            <div class="assignees-chips-list" id="manager-task-assignee-chips"></div>
+                            <select class="assignee-select-dropdown" onchange="addAssigneeChip(this, 'manager-task-assignee-chips')">
+                                <option value="">+ Select Manager to add...</option>
+                                <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
+                                    <option value="<%= m.id %>" data-name="<%= m.name %>" data-role="Manager"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
                                 <% }) %>
-                            <% } %>
-                        </select>
+                            </select>
+                        </div>
                     </label>
 
                     <label>
