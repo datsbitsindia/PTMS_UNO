@@ -23,15 +23,12 @@
         <% } %>
 
         <% if (user.role === 'manager' || user.role === 'admin') { %>
-            <a href="/employees" class="<%= page === 'employees' ? 'active' : '' %>">
-                <i class="fa-solid fa-users"></i>Employees
+            <a href="/employees" class="<%= page === 'employees' || page === 'managers' ? 'active' : '' %>">
+                <i class="fa-solid fa-users"></i>Users & Team
             </a>
         <% } %>
 
         <% if (user.role === 'admin') { %>
-            <a href="/managers" class="<%= page === 'managers' ? 'active' : '' %>">
-                <i class="fa-solid fa-user-tie"></i>Managers
-            </a>
             <a href="/updates" class="<%= page === 'updates' ? 'active' : '' %>">
                 <i class="fa-solid fa-list-check"></i>Updates
             </a>
@@ -74,13 +71,7 @@
 
             <% if (page === 'employees') { %>
                 <button class="btn primary btn-sm" data-open="employee-modal" style="white-space:nowrap;">
-                    <i class="fa-solid fa-user-plus"></i> Add Employee
-                </button>
-            <% } %>
-
-            <% if (page === 'managers' && user.role === 'admin') { %>
-                <button class="btn primary btn-sm" data-open="manager-modal" style="white-space:nowrap;">
-                    <i class="fa-solid fa-user-plus"></i> Add Manager
+                    <i class="fa-solid fa-user-plus"></i> Add Team Member
                 </button>
             <% } %>
 
@@ -89,8 +80,6 @@
                     <i class="fa-solid fa-plus"></i> New Project
                 </button>
             <% } %>
-
-
 
             <form action="/logout" method="post" style="margin:0;">
                 <button class="logout-btn" style="white-space:nowrap;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>

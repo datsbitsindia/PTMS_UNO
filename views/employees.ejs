@@ -1,98 +1,145 @@
-<%- include('partials/head',{title:'Employees'}) %>
+<%- include('partials/head',{title:'Users & Team'}) %>
 <%- include('partials/nav',{page:'employees'}) %>
 
-<% const active=employees.filter(e=>e.active).length, departments=new Set(employees.map(e=>e.department).filter(Boolean)).size; %>
+<% 
+  const activeCount = employees.filter(e => e.active).length;
+  const managersCount = employees.filter(e => e.role === 'manager').length;
+  const employeesCount = employees.filter(e => e.role === 'employee').length;
+  const departments = new Set(employees.map(e => e.department).filter(Boolean)).size; 
+%>
 
 <div class="metric-grid employee-kpis four">
     <div class="metric-card purple" onclick="filterByKpi('all', event)" title="Click to show all">
         <i class="fa-solid fa-users"></i>
         <b><%= employees.length %></b>
-        <span>Total Employees</span>
+        <span>Total Team</span>
     </div>
     <div class="metric-card green" onclick="filterByKpi('Active', event)" title="Click to filter Active">
         <i class="fa-solid fa-briefcase"></i>
-        <b><%= active %></b>
+        <b><%= activeCount %></b>
         <span>Active</span>
     </div>
-    <div class="metric-card orange" onclick="filterByKpi('Inactive', event)" title="Click to filter Inactive">
-        <i class="fa-solid fa-pause"></i>
-        <b><%= employees.length-active %></b>
-        <span>Inactive</span>
-    </div>
-    <div class="metric-card red" onclick="filterByKpi('all', event)" title="Click to reset filter">
-        <i class="fa-solid fa-building"></i>
-        <b><%= departments %></b>
-        <span>Departments</span>
+    <% if (currentUserRole === 'admin') { %>
+        <div class="metric-card orange" onclick="filterByKpi('Manager', event)" title="Click to filter Managers">
+            <i class="fa-solid fa-user-tie"></i>
+            <b><%= managersCount %></b>
+            <span>Managers</span>
+        </div>
+    <% } else { %>
+        <div class="metric-card orange" onclick="filterByKpi('Inactive', event)" title="Click to filter Inactive">
+            <i class="fa-solid fa-pause"></i>
+            <b><%= employees.length - activeCount %></b>
+            <span>Inactive</span>
+        </div>
+    <% } %>
+    <div class="metric-card red" onclick="filterByKpi('Employee', event)" title="Click to filter Employees">
+        <i class="fa-solid fa-user-gear"></i>
+        <b><%= employeesCount %></b>
+        <span>Employees</span>
     </div>
 </div>
 
-<div class="toolbar-ui compact-filter">
-    <input type="search" placeholder="Search employees...">
-    <select>
-        <option>All Departments</option>
-        <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
-            <option><%= x %></option>
-        <% }) %>
-    </select>
-    <select>
-        <option>All Designations</option>
-        <% [...new Set(employees.map(e=>e.designation).filter(Boolean))].forEach(x=>{ %>
-            <option><%= x %></option>
-        <% }) %>
-    </select>
-    <button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button>
+<div class="toolbar-ui compact-filter" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
+        <input type="search" placeholder="Search team members..." style="max-width:240px;">
+        <% if (currentUserRole === 'admin') { %>
+            <select style="max-width:160px;">
+                <option value="">All Roles</option>
+                <option value="Manager">Manager</option>
+                <option value="Employee">Employee</option>
+            </select>
+        <% } %>
+        <select style="max-width:180px;">
+            <option value="">All Departments</option>
+            <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
+                <option><%= x %></option>
+            <% }) %>
+        </select>
+        <button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button>
+    </div>
+    <button type="button" class="btn primary" data-open="employee-modal" style="border-radius:10px; font-weight:700; gap:6px;">
+        <i class="fa-solid fa-plus"></i> Add Team Member
+    </button>
 </div>
 
-<section class="ui-panel">
+<section class="ui-panel" style="margin-top:16px;">
     <div class="entity-list">
         <% employees.forEach(e=>{ %>
-            <article class="entity-card employee-card" data-status="<%= e.active ? 'Active' : 'Inactive' %>">
+            <article class="entity-card employee-card" data-status="<%= e.active ? 'Active' : 'Inactive' %>" data-role="<%= e.role === 'manager' ? 'Manager' : 'Employee' %>">
                 <div class="entity-title" style="flex:1 1 auto!important; min-width:0!important;">
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
                         <b style="font-size:14px; color:#0f172a;"><%= e.name %></b>
-                        <span class="status-chip <%= e.active?'active':'inactive' %>"><%= e.active?'Active':'Inactive' %></span>
+                        <% if (e.role === 'manager') { %>
+                            <span class="pill" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:11px; padding:2px 8px;">
+                                <i class="fa-solid fa-user-tie"></i> Manager
+                            </span>
+                        <% } else { %>
+                            <span class="pill" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; font-size:11px; padding:2px 8px;">
+                                <i class="fa-solid fa-user"></i> Employee
+                            </span>
+                        <% } %>
+                        <span class="status-chip <%= e.active ? 'active' : 'inactive' %>"><%= e.active ? 'Active' : 'Inactive' %></span>
                     </div>
-                    <small style="color:#64748b; font-size:11px; display:block; overflow:hidden; text-overflow:ellipsis;"><%= e.email %></small>
-                    <div class="employee-inline-info" style="display:flex; align-items:center; gap:10px; margin-top:3px; font-size:11px; color:#475569; flex-wrap:wrap;">
+                    <small style="color:#64748b; font-size:12px; display:block; overflow:hidden; text-overflow:ellipsis;"><%= e.email %></small>
+                    <div class="employee-inline-info" style="display:flex; align-items:center; gap:12px; margin-top:4px; font-size:11px; color:#475569; flex-wrap:wrap;">
                         <span><i class="fa-solid fa-building" style="color:#6366f1;"></i> <b>Dept:</b> <%= e.department||'—' %></span>
-                        <span><i class="fa-solid fa-user-tag" style="color:#16a34a;"></i> <b>Role:</b> <%= e.designation||'—' %></span>
+                        <span><i class="fa-solid fa-user-tag" style="color:#16a34a;"></i> <b>Designation:</b> <%= e.designation||'—' %></span>
+                        <% if (e.phone) { %>
+                            <span><i class="fa-solid fa-phone" style="color:#0284c7;"></i> <b>Phone:</b> <%= e.phone %></span>
+                        <% } %>
                     </div>
                 </div>
                 <div class="row-actions" style="display:flex!important; flex-direction:row!important; align-items:center!important; gap:8px!important; flex-shrink:0!important; margin-left:auto!important;">
-                    <button class="icon-btn edit-employee" data-employee='<%- JSON.stringify({id:e.id,name:e.name,email:e.email,phone:e.phone,department:e.department,designation:e.designation}) %>' title="Edit employee">
+                    <button class="icon-btn edit-employee" data-employee='<%- JSON.stringify({id:e.id,role:e.role,name:e.name,email:e.email,phone:e.phone||'',department:e.department||'',designation:e.designation||''}) %>' title="Edit member">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                     <form action="/employees/<%= e.id %>/toggle" method="post" style="margin:0;">
-                        <button class="icon-btn" title="<%= e.active ? 'Deactivate employee' : 'Activate employee' %>" style="color:<%= e.active ? '#16a34a' : '#94a3b8' %>;">
-                            <i class="fa-solid <%= e.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:16px;"></i>
+                        <button class="icon-btn" title="<%= e.active ? 'Deactivate member' : 'Activate member' %>" style="color:<%= e.active ? '#16a34a' : '#94a3b8' %>;">
+                            <i class="fa-solid <%= e.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:18px;"></i>
                         </button>
                     </form>
-                    <form action="/employees/<%= e.id %>/delete" method="post" onsubmit="return confirm('Delete this employee? This cannot be undone.')" style="margin:0;">
-                        <button class="icon-btn delete-employee" title="Delete employee">
+                    <form action="/employees/<%= e.id %>/delete" method="post" onsubmit="return confirm('Delete this team member? This action cannot be undone.')" style="margin:0;">
+                        <button class="icon-btn delete-employee" title="Delete member">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </form>
                 </div>
             </article>
         <% }) %>
+        <% if (!employees.length) { %>
+            <p class="empty">No team members found.</p>
+        <% } %>
     </div>
 </section>
 
 <div class="modal" id="employee-modal">
     <div class="modal-card">
         <button class="modal-close" data-close>&times;</button>
-        <h2 id="employee-title">Add employee</h2>
+        <h2 id="employee-title">Add Team Member</h2>
         <form method="post" action="/employees/save" class="form-grid" id="employee-form">
             <input type="hidden" name="id">
-            <label>Name<input name="name" required></label>
-            <label>Email<input type="email" name="email" required></label>
-            <label>Phone<input name="phone"></label>
-            <label>Department<input name="department"></label>
-            <label>Designation<input name="designation"></label>
-            <label>Password<input type="password" name="password"><small>Required for new employees</small></label>
+            
+            <% if (currentUserRole === 'admin') { %>
+                <label class="full">
+                    Account Role
+                    <select name="role" id="employee-role-select" required>
+                        <option value="employee">Employee</option>
+                        <option value="manager">Manager</option>
+                    </select>
+                </label>
+            <% } else { %>
+                <input type="hidden" name="role" value="employee">
+            <% } %>
+
+            <label>Name<input name="name" placeholder="Enter full name" required></label>
+            <label>Email<input type="email" name="email" placeholder="name@company.com" required></label>
+            <label>Phone<input name="phone" placeholder="e.g. +91 9876543210"></label>
+            <label>Department<input name="department" placeholder="e.g. Technology / Sales"></label>
+            <label>Designation<input name="designation" placeholder="e.g. Software Engineer"></label>
+            <label>Password<input type="password" name="password"><small id="pwd-note">Required for new members</small></label>
             <div class="full actions">
                 <button type="button" class="btn" data-close>Cancel</button>
-                <button class="btn primary">Save employee</button>
+                <button class="btn primary">Save Team Member</button>
             </div>
         </form>
     </div>
