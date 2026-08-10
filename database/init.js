@@ -70,8 +70,9 @@ CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMA
     await addColumn(`${prefix}tasks`, 'started_at', 'DATETIME NULL AFTER created_at');
     await addColumn(`${prefix}projects`, 'started_at', 'DATETIME NULL AFTER created_at');
     await addColumn(`${prefix}projects`, 'completed_at', 'DATETIME NULL AFTER started_at');
-    try { await pool.query(`ALTER TABLE ${prefix}tasks MODIFY assigned_to VARCHAR(255) NOT NULL`); } catch(e) {}
+    await fixTasksAssignedToColumn();
     await addStandardAuditColumns();
+
 
     await removeAuditNameColumns();
     await pool.query(`ALTER TABLE ${prefix}users MODIFY role ENUM('admin','manager','employee') NOT NULL`);
@@ -82,7 +83,23 @@ CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMA
     return pool;
 }
 
+async function fixTasksAssignedToColumn() {
+    try {
+        const [rows] = await pool.query(
+            `SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME='assigned_to' AND REFERENCED_TABLE_NAME IS NOT NULL`,
+            [config.mysql.database, `${prefix}tasks`]
+        );
+        for (const r of rows) {
+            try {
+                await pool.query(`ALTER TABLE ${prefix}tasks DROP FOREIGN KEY ${r.CONSTRAINT_NAME}`);
+            } catch(e) {}
+        }
+        await pool.query(`ALTER TABLE ${prefix}tasks MODIFY assigned_to VARCHAR(255) NOT NULL`);
+    } catch(e) {}
+}
+
 async function addColumn(table, column, definition) {
+
     const [r] = await pool.query('SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?', [config.mysql.database, table, column]);
     if (!r.length) await pool.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
 }
