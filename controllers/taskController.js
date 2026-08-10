@@ -14,6 +14,7 @@ const baseQuery = `
         COALESCE(ta.completed_at, t.completed_at) AS completed_at,
         COALESCE(
             (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM task_assignees ta2 JOIN users u ON u.id=ta2.user_id WHERE ta2.task_id=t.id),
+            (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM users u WHERE FIND_IN_SET(u.id, t.assigned_to) > 0),
             a.name
         ) AS assigned_name,
         c.name creator_name, p.name project_name, p.manager_id,
@@ -27,8 +28,10 @@ const baseQuery = `
 
 const canView = async (u, t) => {
     if (u.role === 'admin') return true;
-    if (t.created_by === u.id || t.assigned_to === u.id) return true;
+    if (t.created_by === u.id) return true;
     if (u.role === 'manager' && t.manager_id === u.id) return true;
+    const assignedArr = String(t.assigned_to || '').split(',');
+    if (assignedArr.includes(String(u.id))) return true;
     const isAssignee = await db.prepare('SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?').get(t.id, u.id);
     if (isAssignee) return true;
     const forwardLog = await db.prepare('SELECT 1 FROM task_forward_logs WHERE task_id=? AND (from_user_id=? OR to_user_id=?)').get(t.id, u.id, u.id);
@@ -47,10 +50,10 @@ exports.list = async (req, res) => {
     let params = [u.id];
 
     if (u.role === 'employee') {
-        baseFilter = '(t.assigned_to=? OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        baseFilter = '(FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
         params.push(u.id, u.id, u.id, u.id);
     } else if (u.role === 'manager') {
-        baseFilter = '(p.manager_id=? OR t.created_by=? OR t.assigned_to=? OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        baseFilter = '(p.manager_id=? OR t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
         params.push(u.id, u.id, u.id, u.id, u.id, u.id);
     }
 
@@ -69,6 +72,9 @@ exports.list = async (req, res) => {
             const val = req.query[key].trim();
             if (field === 'status' && val.toLowerCase() === 'pending') {
                 filters.push("LOWER(COALESCE(ta.status, t.status)) IN ('pending', 'planned')");
+            } else if (field === 'assigned_to') {
+                filters.push("FIND_IN_SET(?, t.assigned_to) > 0");
+                params.push(val.toLowerCase());
             } else {
                 filters.push(`LOWER(t.${field})=?`);
                 params.push(val.toLowerCase());
@@ -179,8 +185,14 @@ exports.forward = async (req, res) => {
         await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)')
             .run(taskId, Number(targetUser.id), 'Pending');
 
+        const currentAssignees = String(task.assigned_to || '').split(',').filter(Boolean);
+        if (!currentAssignees.includes(String(targetUser.id))) {
+            currentAssignees.push(String(targetUser.id));
+        }
+        const updatedAssignedToStr = currentAssignees.join(',');
+
         await db.prepare('UPDATE tasks SET assigned_to=?, is_forwarded=1, updated_by=? WHERE id=?')
-            .run(Number(targetUser.id), Number(user.id), taskId);
+            .run(updatedAssignedToStr, Number(user.id), taskId);
 
         await activity.log(user.id, 'Task Forwarded', `${fromUser?.name || 'User'} -> ${targetUser.name}: ${task.title}`);
 
@@ -217,11 +229,13 @@ exports.save = async (req, res) => {
     }
 
     if (id) {
-        let targetAssignee = Array.isArray(assigned_to) ? Number(assigned_to[0]) : (assigned_to ? Number(assigned_to) : req.session.user.id);
-        const targetUser = await db.prepare("SELECT id, role, name FROM users WHERE id=? AND active=1").get(targetAssignee);
-        if (!title || !targetUser) return res.status(400).render('error', {
-            message: 'Valid assignee and task title are required'
-        });
+        let rawAssignees = [];
+        if (Array.isArray(assigned_to)) rawAssignees = assigned_to;
+        else if (assigned_to) rawAssignees = String(assigned_to).split(',');
+        else rawAssignees = [req.session.user.id];
+
+        const assignees = [...new Set(rawAssignees.map(x => Number(x)).filter(Boolean))];
+        const assignedToStr = assignees.join(',');
 
         if (req.session.user.role === 'admin') {
             return res.status(403).render('error', { message: 'Admin can only view tasks. Task editing is disabled in Updates.' });
@@ -230,15 +244,16 @@ exports.save = async (req, res) => {
         const existingTask = await db.prepare('SELECT t.*, p.manager_id FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE t.id=?').get(id);
         if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
 
-        const isSelfTask = Number(targetAssignee) === Number(req.session.user.id) ? 1 : 0;
+        const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
         await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
-            pid, title, description, priority, due_date || null, targetAssignee, Number(estimated_hours) || 0, isSelfTask, id
+            pid, title, description, priority, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
         );
 
-        await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(id, targetAssignee, 'Pending');
-
-        await activity.log(req.session.user.id, 'Task Updated', title);
-        await notifications.notify(targetAssignee, `Task Updated: ${req.session.user.name} updated task details for '${title}'`, `/tasks/${id}`);
+        for (const targetAssignee of assignees) {
+            await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(id, targetAssignee, 'Pending');
+            await activity.log(req.session.user.id, 'Task Updated', title);
+            await notifications.notify(targetAssignee, `Task Updated: ${req.session.user.name} updated task details for '${title}'`, `/tasks/${id}`);
+        }
         res.redirect(`/tasks/${id}`);
     } else {
         let rawAssignees = [];
@@ -262,16 +277,17 @@ exports.save = async (req, res) => {
             createdBy = Number(report_to);
         }
 
-        const primaryAssignee = assignees[0];
-        const isSelfTask = Number(primaryAssignee) === Number(req.session.user.id) ? 1 : 0;
+        // assigned_to column in tasks table stores all assigned IDs as comma-separated string: "6,7"
+        const assignedToStr = assignees.join(',');
+        const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
         
-        // Single Task Entry inserted into tasks table
+        // Single Task Entry inserted into tasks table with comma-separated assigned_to e.g. "6,7"
         const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priority, 'Pending', due_date || null, createdBy, primaryAssignee, Number(estimated_hours) || 0, isSelfTask
+            pid, title, description, priority, 'Pending', due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
-        // Multiple assignees inserted into task_assignees junction table
+        // Insert into task_assignees table for individual status tracking
         for (const targetAssignee of assignees) {
             await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(taskId, targetAssignee, 'Pending');
             await activity.log(req.session.user.id, 'Task Created', title);
@@ -431,7 +447,7 @@ exports.remove = async (req, res) => {
 
     const canDelete = req.session.user.id === task.created_by ||
                       req.session.user.id === task.manager_id ||
-                      req.session.user.id === task.assigned_to;
+                      String(task.assigned_to || '').split(',').includes(String(req.session.user.id));
 
     if (!canDelete) {
         return res.status(403).render('error', { message: 'Only the task creator, manager, or assigned user can delete this task.' });
@@ -444,11 +460,15 @@ exports.remove = async (req, res) => {
     await db.prepare('DELETE FROM tasks WHERE id=?').run(taskId);
 
     await activity.log(req.session.user.id, 'Task Deleted', task.title);
-    await notifications.notify(
-        task.assigned_to,
-        `Task Deleted: Manager ${req.session.user.name} has deleted the task "${task.title}".`,
-        '/tasks'
-    );
+
+    const assigneesList = String(task.assigned_to || '').split(',').filter(Boolean);
+    for (const uid of assigneesList) {
+        await notifications.notify(
+            uid,
+            `Task Deleted: Manager ${req.session.user.name} has deleted the task "${task.title}".`,
+            '/tasks'
+        );
+    }
 
     res.redirect('/tasks');
 };

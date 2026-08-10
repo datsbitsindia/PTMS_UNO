@@ -70,7 +70,9 @@ CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMA
     await addColumn(`${prefix}tasks`, 'started_at', 'DATETIME NULL AFTER created_at');
     await addColumn(`${prefix}projects`, 'started_at', 'DATETIME NULL AFTER created_at');
     await addColumn(`${prefix}projects`, 'completed_at', 'DATETIME NULL AFTER started_at');
+    try { await pool.query(`ALTER TABLE ${prefix}tasks MODIFY assigned_to VARCHAR(255) NOT NULL`); } catch(e) {}
     await addStandardAuditColumns();
+
     await removeAuditNameColumns();
     await pool.query(`ALTER TABLE ${prefix}users MODIFY role ENUM('admin','manager','employee') NOT NULL`);
     await pool.query(`ALTER TABLE ${prefix}notes MODIFY details LONGTEXT`);
