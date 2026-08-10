@@ -23,9 +23,16 @@
             <label>Name<input name="name" value="<%= profile.name %>" required></label>
             <label>Email<input value="<%= profile.email %>" disabled></label>
             <label>Phone<input name="phone" value="<%= profile.phone %>" placeholder="Enter phone number"></label>
-            <label>Department<input name="department" value="<%= profile.department %>"></label>
-            <label>Designation<input name="designation" value="<%= profile.designation %>"></label>
+            <label class="full" style="position:relative;">
+                Department
+                <input name="department" class="autocomplete-master" data-type="department" value="<%= profile.department %>" placeholder="Search or enter department" autocomplete="off">
+            </label>
+            <label class="full" style="position:relative;">
+                Designation
+                <input name="designation" class="autocomplete-master" data-type="designation" value="<%= profile.designation %>" placeholder="Search or enter designation" autocomplete="off">
+            </label>
             <label>Role<input value="<%= user.role %>" disabled></label>
+
             <div class="full actions">
                 <button class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
             </div>

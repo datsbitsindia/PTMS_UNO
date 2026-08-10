@@ -26,7 +26,11 @@
             <a href="/employees" class="<%= page === 'employees' || page === 'managers' ? 'active' : '' %>">
                 <i class="fa-solid fa-users"></i>Users & Team
             </a>
+            <a href="/master" class="<%= page === 'master' ? 'active' : '' %>">
+                <i class="fa-solid fa-sliders"></i>Dept & Desig Master
+            </a>
         <% } %>
+
 
         <% if (user.role === 'admin') { %>
             <a href="/updates" class="<%= page === 'updates' ? 'active' : '' %>">

@@ -1,0 +1,169 @@
+<%- include('partials/head',{title:'Department & Designation Master'}) %>
+<%- include('partials/nav',{page:'master'}) %>
+
+<div class="metric-grid employee-kpis" style="grid-template-columns: repeat(2, 1fr); max-width: 600px; margin-bottom: 20px;">
+    <div class="metric-card purple">
+        <i class="fa-solid fa-building"></i>
+        <b><%= departments.length %></b>
+        <span>Departments Master</span>
+    </div>
+    <div class="metric-card green">
+        <i class="fa-solid fa-user-tag"></i>
+        <b><%= designations.length %></b>
+        <span>Designations Master</span>
+    </div>
+</div>
+
+<% if (error) { %>
+    <div class="alert alert-error" style="background:#fef2f2; color:#b91c1c; border:1px solid #fca5a5; padding:12px 16px; border-radius:10px; margin-bottom:16px; font-weight:600;">
+        <i class="fa-solid fa-circle-exclamation"></i> <%= error %>
+    </div>
+<% } %>
+
+<% if (success) { %>
+    <div class="alert alert-success" style="background:#f0fdf4; color:#15803d; border:1px solid #86efac; padding:12px 16px; border-radius:10px; margin-bottom:16px; font-weight:600;">
+        <i class="fa-solid fa-circle-check"></i> <%= success %>
+    </div>
+<% } %>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+
+    <!-- Departments Panel -->
+    <section class="ui-panel">
+        <div class="ui-panel-head" style="display:flex; justify-content:space-between; align-items:center;">
+            <h2><i class="fa-solid fa-building" style="color:#6366f1;"></i> Departments</h2>
+            <button class="btn primary compact" data-open="dept-modal">
+                <i class="fa-solid fa-plus"></i> Add Dept
+            </button>
+        </div>
+        <div class="entity-list">
+            <% departments.forEach(d => { %>
+                <article class="entity-card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px;">
+                    <div>
+                        <b style="font-size:14px; color:#0f172a;"><%= d.name %></b>
+                        <small style="display:block; color:#64748b; font-size:11px;">
+                            <%= d.user_count %> assigned user<%= d.user_count === 1 ? '' : 's' %>
+                        </small>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="status-chip <%= d.active ? 'active' : 'inactive' %>">
+                            <%= d.active ? 'Active' : 'Inactive' %>
+                        </span>
+                        <button class="icon-btn edit-dept-btn" data-dept='<%- JSON.stringify(d) %>' title="Edit Department">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <form action="/master/departments/<%= d.id %>/toggle" method="post" style="margin:0;">
+                            <button class="icon-btn" title="<%= d.active ? 'Deactivate' : 'Activate' %>" style="color:<%= d.active ? '#16a34a' : '#94a3b8' %>;">
+                                <i class="fa-solid <%= d.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:18px;"></i>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            <% }) %>
+            <% if (!departments.length) { %>
+                <p class="empty">No departments found.</p>
+            <% } %>
+        </div>
+    </section>
+
+    <!-- Designations Panel -->
+    <section class="ui-panel">
+        <div class="ui-panel-head" style="display:flex; justify-content:space-between; align-items:center;">
+            <h2><i class="fa-solid fa-user-tag" style="color:#16a34a;"></i> Designations</h2>
+            <button class="btn primary compact" data-open="desig-modal">
+                <i class="fa-solid fa-plus"></i> Add Designation
+            </button>
+        </div>
+        <div class="entity-list">
+            <% designations.forEach(des => { %>
+                <article class="entity-card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px;">
+                    <div>
+                        <b style="font-size:14px; color:#0f172a;"><%= des.name %></b>
+                        <small style="display:block; color:#64748b; font-size:11px;">
+                            <%= des.user_count %> assigned user<%= des.user_count === 1 ? '' : 's' %>
+                        </small>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="status-chip <%= des.active ? 'active' : 'inactive' %>">
+                            <%= des.active ? 'Active' : 'Inactive' %>
+                        </span>
+                        <button class="icon-btn edit-desig-btn" data-desig='<%- JSON.stringify(des) %>' title="Edit Designation">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <form action="/master/designations/<%= des.id %>/toggle" method="post" style="margin:0;">
+                            <button class="icon-btn" title="<%= des.active ? 'Deactivate' : 'Activate' %>" style="color:<%= des.active ? '#16a34a' : '#94a3b8' %>;">
+                                <i class="fa-solid <%= des.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:18px;"></i>
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            <% }) %>
+            <% if (!designations.length) { %>
+                <p class="empty">No designations found.</p>
+            <% } %>
+        </div>
+    </section>
+
+</div>
+
+<!-- Department Modal -->
+<div class="modal" id="dept-modal">
+    <div class="modal-card">
+        <button class="modal-close" data-close>&times;</button>
+        <h2 id="dept-modal-title">Add Department</h2>
+        <form method="post" action="/master/departments/save" class="form-grid" id="dept-modal-form">
+            <input type="hidden" name="id" id="dept-id-input">
+            <label class="full">Department Name
+                <input name="name" id="dept-name-input" placeholder="e.g. Information Technology" required>
+            </label>
+            <div class="full actions">
+                <button type="button" class="btn" data-close>Cancel</button>
+                <button class="btn primary">Save Department</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Designation Modal -->
+<div class="modal" id="desig-modal">
+    <div class="modal-card">
+        <button class="modal-close" data-close>&times;</button>
+        <h2 id="desig-modal-title">Add Designation</h2>
+        <form method="post" action="/master/designations/save" class="form-grid" id="desig-modal-form">
+            <input type="hidden" name="id" id="desig-id-input">
+            <label class="full">Designation Name
+                <input name="name" id="desig-name-input" placeholder="e.g. Senior Software Engineer" required>
+            </label>
+            <div class="full actions">
+                <button type="button" class="btn" data-close>Cancel</button>
+                <button class="btn primary">Save Designation</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.edit-dept-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const data = JSON.parse(btn.dataset.dept);
+            document.getElementById('dept-modal-title').innerText = 'Edit Department';
+            document.getElementById('dept-id-input').value = data.id;
+            document.getElementById('dept-name-input').value = data.name;
+            document.getElementById('dept-modal').classList.add('active');
+        });
+    });
+
+    document.querySelectorAll('.edit-desig-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const data = JSON.parse(btn.dataset.desig);
+            document.getElementById('desig-modal-title').innerText = 'Edit Designation';
+            document.getElementById('desig-id-input').value = data.id;
+            document.getElementById('desig-name-input').value = data.name;
+            document.getElementById('desig-modal').classList.add('active');
+        });
+    });
+});
+</script>
+
+<%- include('partials/foot') %>

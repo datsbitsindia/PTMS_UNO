@@ -1,4 +1,66 @@
-document.addEventListener('click',event=>{const target=event.target.closest('a,button');if(!target)return;const payload=JSON.stringify({action:target.dataset.audit||target.getAttribute('aria-label')||target.textContent.trim()||target.tagName,text:target.textContent.trim(),href:target.getAttribute('href')||'',page:location.pathname});navigator.sendBeacon('/audit/click',new Blob([payload],{type:'application/json'}));});document.querySelector('.menu-btn')?.addEventListener('click',()=>document.querySelector('.sidebar').classList.toggle('open'));document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const id=b.dataset.open,m=document.getElementById(id);if(!m)return;if(id==='task-modal'){const f=document.getElementById('single-task-form');if(f){f.reset();const inp=document.getElementById('task-id-input');if(inp)inp.value='';const h=document.getElementById('task-form-heading');if(h)h.textContent='Assign employee task'}}if(id==='employee-modal'){const f=document.getElementById('employee-form');if(f){f.reset();const inp=f.elements['id'];if(inp)inp.value='';const h=document.getElementById('employee-title');if(h)h.textContent='Add Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Required for new members'}}m.classList.add('open');if(window.initAllCKEditors)setTimeout(window.initAllCKEditors,100);});document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('open'));document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('employee-title');if(t)t.textContent='Edit Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('employee-modal').classList.add('open')}});const chart=document.getElementById('statusChart');if(chart){const data=JSON.parse(chart.dataset.values);new Chart(chart,{type:'doughnut',data:{labels:data.map(x=>x.label),datasets:[{data:data.map(x=>x.value),backgroundColor:['#f59e0b','#16a34a','#22c55e','#94a3b8']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}})}
+
+function initMasterAutocomplete() {
+    document.querySelectorAll('.autocomplete-master').forEach(input => {
+        if (input.dataset.autocompleteInited) return;
+        input.dataset.autocompleteInited = 'true';
+        const type = input.dataset.type;
+        const container = input.parentElement;
+        let suggestionsBox = container.querySelector('.autocomplete-suggestions');
+        if (!suggestionsBox) {
+            suggestionsBox = document.createElement('div');
+            suggestionsBox.className = 'autocomplete-suggestions';
+            suggestionsBox.style.cssText = 'display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #cbd5e1; border-radius:8px; max-height:180px; overflow-y:auto; z-index:1000; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);';
+            container.appendChild(suggestionsBox);
+        }
+
+        const fetchAndShow = async () => {
+            const val = input.value.trim();
+            const endpoint = type === 'department' ? '/api/departments' : '/api/designations';
+            try {
+                const res = await fetch(`${endpoint}?q=${encodeURIComponent(val)}`);
+                const items = await res.json();
+                suggestionsBox.innerHTML = '';
+
+                if (items && items.length) {
+                    items.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:13px; color:#1e293b; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;';
+                        div.innerHTML = `<span><i class="fa-solid ${type==='department'?'fa-building':'fa-user-tag'}" style="color:#6366f1; margin-right:6px;"></i> <b>${item.name}</b></span> <small style="color:#94a3b8; font-size:11px;">Select</small>`;
+                        div.onmousedown = (e) => {
+                            e.preventDefault();
+                            input.value = item.name;
+                            suggestionsBox.style.display = 'none';
+                        };
+                        suggestionsBox.appendChild(div);
+                    });
+                } else if (val) {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item new';
+                    div.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:13px; color:#4338ca; background:#f5f3ff; font-weight:600;';
+                    div.innerHTML = `<i class="fa-solid fa-plus-circle"></i> Add "${val}" as new ${type}`;
+                    div.onmousedown = (e) => {
+                        e.preventDefault();
+                        suggestionsBox.style.display = 'none';
+                    };
+                    suggestionsBox.appendChild(div);
+                } else {
+                    suggestionsBox.style.display = 'none';
+                    return;
+                }
+                suggestionsBox.style.display = 'block';
+            } catch(e) {}
+        };
+
+        input.addEventListener('focus', fetchAndShow);
+        input.addEventListener('input', fetchAndShow);
+        input.addEventListener('blur', () => {
+            setTimeout(() => { suggestionsBox.style.display = 'none'; }, 200);
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', initMasterAutocomplete);
+
 
 function applyCompactFilter(bar){window.applyCompactFilter(bar);}
 window.applyCompactFilter = function(bar) {

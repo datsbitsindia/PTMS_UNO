@@ -74,9 +74,16 @@
             <label>Name<input name="name" required></label>
             <label>Email<input type="email" name="email" required></label>
             <label>Phone<input name="phone"></label>
-            <label>Department<input name="department"></label>
-            <label>Designation<input name="designation" value="Manager"></label>
+            <label class="full" style="position:relative;">
+                Department
+                <input name="department" class="autocomplete-master" data-type="department" placeholder="Search or enter department" autocomplete="off">
+            </label>
+            <label class="full" style="position:relative;">
+                Designation
+                <input name="designation" class="autocomplete-master" data-type="designation" placeholder="Search or enter designation" value="Manager" autocomplete="off">
+            </label>
             <label>Password<input type="password" name="password"><small id="pwd-note">Required for new managers</small></label>
+
             <div class="full actions">
                 <button type="button" class="btn" data-close>Cancel</button>
                 <button class="btn primary">Save manager</button>

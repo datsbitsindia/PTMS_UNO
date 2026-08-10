@@ -1,15 +1,26 @@
-const bcrypt = require('bcrypt');
-const { db } = require('../database/init');
-const activity = require('../services/activityService');
+const masterService = require('../services/masterService');
 
 exports.list = async (req, res) => {
     const currentUserRole = req.session.user.role;
-    let employees = [];
+    const sql = `
+        SELECT u.*, 
+               d.name AS dept_name, 
+               des.name AS desig_name 
+        FROM users u 
+        LEFT JOIN departments d ON d.id = u.department_id 
+        LEFT JOIN designations des ON des.id = u.designation_id 
+    `;
+    let rawEmployees = [];
     if (currentUserRole === 'admin') {
-        employees = await db.prepare("SELECT * FROM users WHERE role IN ('employee', 'manager') ORDER BY role DESC, name ASC").all();
+        rawEmployees = await db.prepare(`${sql} WHERE u.role IN ('employee', 'manager') ORDER BY u.role DESC, u.name ASC`).all();
     } else {
-        employees = await db.prepare("SELECT * FROM users WHERE role='employee' ORDER BY name ASC").all();
+        rawEmployees = await db.prepare(`${sql} WHERE u.role='employee' ORDER BY u.name ASC`).all();
     }
+    const employees = rawEmployees.map(e => ({
+        ...e,
+        department: e.dept_name || e.department || '',
+        designation: e.desig_name || e.designation || ''
+    }));
     res.render('employees', { employees, currentUserRole });
 };
 
@@ -30,6 +41,14 @@ exports.save = async (req, res) => {
     }
 
     try {
+        const deptObj = await masterService.findOrCreateDepartment(department);
+        const desigObj = await masterService.findOrCreateDesignation(designation);
+
+        const deptId = deptObj ? deptObj.id : null;
+        const desigId = desigObj ? desigObj.id : null;
+        const deptName = deptObj ? deptObj.name : department;
+        const desigName = desigObj ? desigObj.name : designation;
+
         // Check unique name across all users
         const nameDuplicate = id
             ? await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?) AND id <> ?").get(cleanName.toLowerCase(), id)
@@ -56,17 +75,17 @@ exports.save = async (req, res) => {
             }
 
             if (password) {
-                await db.prepare("UPDATE users SET role=?,name=?,email=?,phone=?,department=?,designation=?,password=? WHERE id=?")
-                    .run(targetRole, cleanName, cleanEmail, phone, department, designation, await bcrypt.hash(password, 12), id);
+                await db.prepare("UPDATE users SET role=?,name=?,email=?,phone=?,department=?,designation=?,department_id=?,designation_id=?,password=? WHERE id=?")
+                    .run(targetRole, cleanName, cleanEmail, phone, deptName, desigName, deptId, desigId, await bcrypt.hash(password, 12), id);
             } else {
-                await db.prepare("UPDATE users SET role=?,name=?,email=?,phone=?,department=?,designation=? WHERE id=?")
-                    .run(targetRole, cleanName, cleanEmail, phone, department, designation, id);
+                await db.prepare("UPDATE users SET role=?,name=?,email=?,phone=?,department=?,designation=?,department_id=?,designation_id=? WHERE id=?")
+                    .run(targetRole, cleanName, cleanEmail, phone, deptName, desigName, deptId, desigId, id);
             }
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Updated`, cleanName);
         } else {
             if (!password) return res.status(400).render('error', { message: 'Password is required for new team member.' });
-            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,created_by) VALUES(?,?,?,?,?,?,?,?)")
-                .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, department, designation, req.session.user.id);
+            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,department_id,designation_id,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)")
+                .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, deptName, desigName, deptId, desigId, req.session.user.id);
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Created`, cleanName);
         }
         res.redirect('/employees');
@@ -75,6 +94,7 @@ exports.save = async (req, res) => {
         res.status(400).render('error', { message: 'Could not save team member. Please make sure name and email are unique.' });
     }
 };
+
 
 exports.toggle = async (req, res) => {
     const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);

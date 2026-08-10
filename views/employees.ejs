@@ -134,8 +134,15 @@
             <label>Name<input name="name" placeholder="Enter full name" required></label>
             <label>Email<input type="email" name="email" placeholder="name@company.com" required></label>
             <label>Phone<input name="phone" placeholder="e.g. +91 9876543210"></label>
-            <label>Department<input name="department" placeholder="e.g. Technology / Sales"></label>
-            <label>Designation<input name="designation" placeholder="e.g. Software Engineer"></label>
+            <label class="full" style="position:relative;">
+                Department
+                <input name="department" id="emp-dept-input" class="autocomplete-master" data-type="department" placeholder="Search or enter department (e.g. IT, HR)" autocomplete="off">
+            </label>
+            <label class="full" style="position:relative;">
+                Designation
+                <input name="designation" id="emp-desig-input" class="autocomplete-master" data-type="designation" placeholder="Search or enter designation (e.g. Software Engineer)" autocomplete="off">
+            </label>
+
             <label>Password<input type="password" name="password"><small id="pwd-note">Required for new members</small></label>
             <div class="full actions">
                 <button type="button" class="btn" data-close>Cancel</button>

@@ -4,7 +4,8 @@ const config = require('../config');
 let pool;
 
 const prefix = config.tablePrefix || 'uno_';
-const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes'];
+const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations'];
+
 
 
 function sqlName(sql) {
@@ -57,11 +58,41 @@ CREATE TABLE IF NOT EXISTS ${prefix}notifications (id INT AUTO_INCREMENT PRIMARY
 CREATE TABLE IF NOT EXISTS ${prefix}activity_logs (id INT AUTO_INCREMENT PRIMARY KEY,user_id INT NULL,action VARCHAR(100) NOT NULL,detail VARCHAR(255) DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE SET NULL) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS ${prefix}notes (id INT AUTO_INCREMENT PRIMARY KEY,user_id INT NOT NULL,title VARCHAR(255) NOT NULL DEFAULT '',details LONGTEXT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE CASCADE) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS ${prefix}task_assignees (id INT AUTO_INCREMENT PRIMARY KEY,task_id INT NOT NULL,user_id INT NOT NULL,status ENUM('Pending','In Progress','Completed','Cancelled') DEFAULT 'Pending',completed_at DATETIME NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uk_task_user (task_id, user_id),FOREIGN KEY(task_id) REFERENCES ${prefix}tasks(id) ON DELETE CASCADE,FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE CASCADE) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NULL,user_name VARCHAR(120),user_role VARCHAR(30),event_type VARCHAR(60) NOT NULL,action VARCHAR(150) NOT NULL,http_method VARCHAR(10),path VARCHAR(500),entity_type VARCHAR(50),entity_id INT NULL,description TEXT,metadata JSON,ip_address VARCHAR(64),user_agent VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit_user(user_id),INDEX idx_audit_created(created_at),INDEX idx_audit_entity(entity_type,entity_id),FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE SET NULL) ENGINE=InnoDB;`);
+CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NULL,user_name VARCHAR(120),user_role VARCHAR(30),event_type VARCHAR(60) NOT NULL,action VARCHAR(150) NOT NULL,http_method VARCHAR(10),path VARCHAR(500),entity_type VARCHAR(50),entity_id INT NULL,description TEXT,metadata JSON,ip_address VARCHAR(64),user_agent VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit_user(user_id),INDEX idx_audit_created(created_at),INDEX idx_audit_entity(entity_type,entity_id),FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE SET NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS ${prefix}departments (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(150) NOT NULL, normalized_name VARCHAR(150) UNIQUE NOT NULL, active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS ${prefix}designations (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(150) NOT NULL, normalized_name VARCHAR(150) UNIQUE NOT NULL, active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB;`);
     try {
         await pool.query(`DELETE FROM ${prefix}task_assignees WHERE task_id IN (SELECT task_id FROM (SELECT task_id FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) <= 1) tmp)`);
         await pool.query(`UPDATE ${prefix}tasks t JOIN (SELECT task_id, GROUP_CONCAT(user_id ORDER BY id SEPARATOR ',') AS all_ids FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) > 1) ta ON ta.task_id = t.id SET t.assigned_to = ta.all_ids`);
     } catch(e) {}
+
+    await addColumn(`${prefix}users`, 'department_id', 'INT NULL AFTER department');
+    await addColumn(`${prefix}users`, 'designation_id', 'INT NULL AFTER designation');
+
+    try {
+        const [usersToMigrate] = await pool.query(`SELECT id, department, designation, department_id, designation_id FROM ${prefix}users`);
+        for (const u of usersToMigrate) {
+            if (u.department && u.department.trim()) {
+                const cleanDept = u.department.trim();
+                const normDept = cleanDept.toLowerCase();
+                await pool.query(`INSERT IGNORE INTO ${prefix}departments (name, normalized_name, active) VALUES (?, ?, 1)`, [cleanDept, normDept]);
+                const [deptRows] = await pool.query(`SELECT id FROM ${prefix}departments WHERE normalized_name=?`, [normDept]);
+                if (deptRows.length && !u.department_id) {
+                    await pool.query(`UPDATE ${prefix}users SET department_id=? WHERE id=?`, [deptRows[0].id, u.id]);
+                }
+            }
+            if (u.designation && u.designation.trim()) {
+                const cleanDesig = u.designation.trim();
+                const normDesig = cleanDesig.toLowerCase();
+                await pool.query(`INSERT IGNORE INTO ${prefix}designations (name, normalized_name, active) VALUES (?, ?, 1)`, [cleanDesig, normDesig]);
+                const [desigRows] = await pool.query(`SELECT id FROM ${prefix}designations WHERE normalized_name=?`, [normDesig]);
+                if (desigRows.length && !u.designation_id) {
+                    await pool.query(`UPDATE ${prefix}users SET designation_id=? WHERE id=?`, [desigRows[0].id, u.id]);
+                }
+            }
+        }
+    } catch(e) {}
+
 
 
 
