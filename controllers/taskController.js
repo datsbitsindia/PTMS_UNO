@@ -287,18 +287,27 @@ exports.save = async (req, res) => {
         );
         const taskId = result.lastInsertRowid;
 
-        // Insert into task_assignees table for individual status tracking
-        for (const targetAssignee of assignees) {
-            await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(taskId, targetAssignee, 'Pending');
+        // Only insert into task_assignees table if task is assigned to MORE THAN 1 person (Multi-assignee tasks)
+        if (assignees.length > 1) {
+            for (const targetAssignee of assignees) {
+                await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(taskId, targetAssignee, 'Pending');
+                await activity.log(req.session.user.id, 'Task Created', title);
+                if (Number(targetAssignee) !== Number(req.session.user.id)) {
+                    await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
+                }
+            }
+        } else {
+            const singleAssignee = assignees[0];
             await activity.log(req.session.user.id, 'Task Created', title);
-            if (Number(targetAssignee) !== Number(req.session.user.id)) {
-                await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
+            if (Number(singleAssignee) !== Number(req.session.user.id)) {
+                await notifications.notify(singleAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
             }
         }
 
         res.redirect(`/tasks/${taskId}`);
     }
 };
+
 
 exports.saveRoutine = async (req, res) => {
     const {

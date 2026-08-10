@@ -59,8 +59,9 @@ CREATE TABLE IF NOT EXISTS ${prefix}notes (id INT AUTO_INCREMENT PRIMARY KEY,use
 CREATE TABLE IF NOT EXISTS ${prefix}task_assignees (id INT AUTO_INCREMENT PRIMARY KEY,task_id INT NOT NULL,user_id INT NOT NULL,status ENUM('Pending','In Progress','Completed','Cancelled') DEFAULT 'Pending',completed_at DATETIME NULL,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uk_task_user (task_id, user_id),FOREIGN KEY(task_id) REFERENCES ${prefix}tasks(id) ON DELETE CASCADE,FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE CASCADE) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS ${prefix}audit_events (id BIGINT AUTO_INCREMENT PRIMARY KEY,user_id INT NULL,user_name VARCHAR(120),user_role VARCHAR(30),event_type VARCHAR(60) NOT NULL,action VARCHAR(150) NOT NULL,http_method VARCHAR(10),path VARCHAR(500),entity_type VARCHAR(50),entity_id INT NULL,description TEXT,metadata JSON,ip_address VARCHAR(64),user_agent VARCHAR(500),created_at DATETIME DEFAULT CURRENT_TIMESTAMP,INDEX idx_audit_user(user_id),INDEX idx_audit_created(created_at),INDEX idx_audit_entity(entity_type,entity_id),FOREIGN KEY(user_id) REFERENCES ${prefix}users(id) ON DELETE SET NULL) ENGINE=InnoDB;`);
     try {
-        await pool.query(`INSERT IGNORE INTO ${prefix}task_assignees (task_id, user_id, status, completed_at) SELECT id, assigned_to, status, completed_at FROM ${prefix}tasks WHERE assigned_to IS NOT NULL AND assigned_to > 0`);
+        await pool.query(`DELETE FROM ${prefix}task_assignees WHERE task_id IN (SELECT task_id FROM (SELECT task_id FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) <= 1) tmp)`);
     } catch(e) {}
+
 
     await addColumn(`${prefix}tasks`, 'project_id', 'INT NULL AFTER id');
     await addColumn(`${prefix}tasks`, 'routine_id', 'INT NULL AFTER completed_at');
