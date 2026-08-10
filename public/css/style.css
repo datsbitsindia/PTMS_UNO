@@ -16,5 +16,7 @@
 .assignee-chip { display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .assignee-chip.chip-manager { background: #fae8ff; color: #86198f; border-color: #f0abfc; }
 .assignee-chip.chip-self { background: #dcfce7; color: #166534; border-color: #86efac; }
-.assignee-chip .chip-remove-btn { border: none; background: rgba(0, 0, 0, 0.12); color: inherit; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; line-height: 1; transition: all 0.15s ease; padding: 0; margin-left: 2px; }
-.assignee-chip .chip-remove-btn:hover { background: #ef4444; color: #ffffff; }
+.assignee-chip .chip-remove-btn { border: none; background: rgba(0, 0, 0, 0.12); color: inherit; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; line-height: 1; transition: background 0.15s ease, color 0.15s ease; padding: 0; margin-left: 2px; outline: none !important; box-shadow: none !important; }
+.assignee-chip .chip-remove-btn:focus, .assignee-chip .chip-remove-btn:focus-visible, .assignee-chip .chip-remove-btn:active { background: rgba(0, 0, 0, 0.18); color: inherit; outline: none !important; box-shadow: none !important; }
+.assignee-chip .chip-remove-btn:hover { background: #ef4444 !important; color: #ffffff !important; }
+
