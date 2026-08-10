@@ -68,7 +68,8 @@
                     <div class="routine-card-top">
                         <div class="routine-card-info">
                             <b><%= r.title %></b>
-                            <small><%= r.project_name %> · <%= r.description || 'Daily routine task' %></small>
+                            <small><%= r.project_name %> · <%= (r.description || '').replace(/<[^>]*>?/gm, '').trim() || 'Daily routine task' %></small>
+
                         </div>
                         <span class="status-chip <%= r.active ? 'in-progress' : 'cancelled' %>">
                             <%= r.active ? 'Active' : 'Paused' %>
@@ -239,8 +240,9 @@
                     <small>
                         <%= t.project_name || 'No project' %>
                         ·
-                        <%= t.description || 'Task details' %>
+                        <%= (t.description || '').replace(/<[^>]*>?/gm, '').trim() || 'Task details' %>
                     </small>
+
 
                 </div>
 

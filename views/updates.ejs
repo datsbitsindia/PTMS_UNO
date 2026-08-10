@@ -165,10 +165,11 @@
                     </div>
 
                     <% if (t.description) { %>
-                        <div style="color:#64748b; font-size:10px; margin-top:1px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
-                            <%= t.description %>
-                        </div>
+                        <p class="task-card-desc" style="color:#64748b; font-size:10px; margin-top:1px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">
+                            <%= (t.description || '').replace(/<[^>]*>?/gm, '').trim() %>
+                        </p>
                     <% } %>
+
                 </div>
 
                 <div style="display:flex !important; flex-direction:column !important; align-items:flex-end !important; justify-content:center !important; gap:2px; font-size:10px; color:#475569; flex-shrink:0 !important; text-align:right !important; margin-left:auto !important;">

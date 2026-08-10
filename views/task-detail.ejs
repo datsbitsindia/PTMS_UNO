@@ -105,21 +105,26 @@
         </div>
     <% } %>
 
-    <% if (task.assigned_to === user.id) { %>
-        <form action="/tasks/<%= task.id %>/status" method="post" class="status-update-form" style="margin-top:14px;">
-            <label>Change Status</label>
-            <select name="status">
-                <% ['Pending','In Progress','Completed','Cancelled'].forEach(x=>{ %>
-                    <option <%= task.status===x?'selected':'' %>><%= x %></option>
-                <% }) %>
-            </select>
-            <button class="btn primary">Update status</button>
+    <% const isCurrentUserAssigned = String(task.assigned_to || '').split(',').includes(String(user.id)) || (typeof taskAssignees !== 'undefined' && taskAssignees.some(a => Number(a.user_id) === Number(user.id))); %>
+    <% if (isCurrentUserAssigned) { %>
+        <% const myAssigneeRecord = (typeof taskAssignees !== 'undefined' && taskAssignees.find(a => Number(a.user_id) === Number(user.id))) || null; %>
+        <% const currentMyStatus = myAssigneeRecord ? myAssigneeRecord.status : task.status; %>
+        <form action="/tasks/<%= task.id %>/status" method="post" class="status-update-form" style="margin-top:14px; display:flex; align-items:flex-end; gap:10px;">
+            <label style="flex:1; margin:0;">Change My Status
+                <select name="status" style="margin-top:4px;">
+                    <% ['Pending','In Progress','Completed','Cancelled'].forEach(x=>{ %>
+                        <option <%= currentMyStatus===x?'selected':'' %>><%= x %></option>
+                    <% }) %>
+                </select>
+            </label>
+            <button class="btn primary"><i class="fa-solid fa-check"></i> Update My Status</button>
         </form>
     <% } else { %>
         <p class="muted compact-note" style="margin-top:10px; color:#475569;">
-            <i class="fa-solid fa-user-check" style="color:#6366f1;"></i> Task assigned to <b><%= task.assigned_name %></b>. Status can be updated by the current assignee.
+            <i class="fa-solid fa-user-check" style="color:#6366f1;"></i> Task assigned to <b><%= task.assigned_name %></b>. Status can be updated by assigned colleagues.
         </p>
     <% } %>
+
 </section>
 
 <section class="panel whatsapp-chat-panel">
