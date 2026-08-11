@@ -199,22 +199,23 @@ exports.addUpdate = async (req, res) => {
 
     if (managerIds.length > 1) {
         try {
-            await db.prepare('INSERT INTO project_assignees(project_id, user_id, status) VALUES(?,?,?) ON DUPLICATE KEY UPDATE status=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END').run(
-                project.id, u.id, newStatus, newStatus, newStatus
+            await db.prepare('INSERT INTO project_assignees(project_id, user_id, status, status_id) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE status=?, status_id=?, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END').run(
+                project.id, u.id, newStatusId, newStatusId, newStatusId, newStatusId, newStatusId
             );
         } catch(e) { console.error('project_assignees upsert error:', e.message); }
 
-        const stats = await db.prepare('SELECT COUNT(*) total, SUM(CASE WHEN status=\'Completed\' THEN 1 ELSE 0 END) completed FROM project_assignees WHERE project_id=?').get(project.id);
+        // Check if ALL managers have reported Completed (status_id=2)
+        const stats = await db.prepare('SELECT COUNT(*) total, SUM(CASE WHEN status_id=2 OR status=2 THEN 1 ELSE 0 END) completed FROM project_assignees WHERE project_id=?').get(project.id);
         const allCompleted = stats && Number(stats.total) > 0 && Number(stats.total) === Number(stats.completed);
 
-        const overallStatus = allCompleted ? 'Completed' : 'In Progress';
-        const overallStatusId = statusToId[overallStatus] ?? 1;
-        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
-            overallStatusId, u.id, overallStatusId, project.id
+        const overallStatusId = allCompleted ? 2 : 1; // 2=Completed, 1=In Progress
+        await db.prepare("UPDATE projects SET status=?, status_id=?, updated_by=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
+            overallStatusId, overallStatusId, u.id, overallStatusId, project.id
         );
     } else {
-        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN ?=1 AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
-            newStatusId, u.id, newStatusId, newStatusId, project.id
+        // Single manager: directly set status based on their progress
+        await db.prepare("UPDATE projects SET status=?, status_id=?, updated_by=?, started_at=CASE WHEN ?=1 AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
+            newStatusId, newStatusId, u.id, newStatusId, newStatusId, project.id
         );
     }
 
