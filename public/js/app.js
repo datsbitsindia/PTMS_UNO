@@ -222,7 +222,18 @@ window.applyCompactFilter = function(bar) {
             }
         }
 
-        const isMatch = matchQuery && matchStatus && matchProject;
+        const activeTabBtn = document.querySelector('.task-tab-btn.active');
+        const activeTab = activeTabBtn ? activeTabBtn.getAttribute('data-task-tab') : 'all';
+        const cardFilterGroup = card.getAttribute('data-filter-group') || '';
+
+        let matchTab = true;
+        if (activeTab === 'assigned-to-me') {
+            matchTab = (cardFilterGroup === 'assigned-to-me' || cardFilterGroup === 'self');
+        } else if (activeTab === 'assigned-by-me') {
+            matchTab = (cardFilterGroup === 'assigned-by-me');
+        }
+
+        const isMatch = matchQuery && matchStatus && matchProject && matchTab;
         if (isMatch) {
             card.style.setProperty('display', '', '');
             card.removeAttribute('hidden');
@@ -233,6 +244,7 @@ window.applyCompactFilter = function(bar) {
             card.setAttribute('hidden', 'true');
             card.hidden = true;
         }
+
     });
 
     let empty = panel.querySelector('.filter-empty');

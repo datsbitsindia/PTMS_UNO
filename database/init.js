@@ -92,7 +92,9 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
     try {
         await pool.query(`DELETE FROM ${prefix}task_assignees WHERE task_id IN (SELECT task_id FROM (SELECT task_id FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) <= 1) tmp)`);
         await pool.query(`UPDATE ${prefix}tasks t JOIN (SELECT task_id, GROUP_CONCAT(user_id ORDER BY id SEPARATOR ',') AS all_ids FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) > 1) ta ON ta.task_id = t.id SET t.assigned_to = ta.all_ids`);
+        await pool.query(`UPDATE ${prefix}tasks t JOIN (SELECT task_id, COUNT(*) total, SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) done FROM ${prefix}task_assignees GROUP BY task_id HAVING total > 1 AND total = done) ta ON ta.task_id = t.id SET t.status = 'Completed', t.completed_at = COALESCE(t.completed_at, NOW())`);
     } catch(e) {}
+
 
     await addColumn(`${prefix}users`, 'department_id', 'INT NULL');
     await addColumn(`${prefix}users`, 'designation_id', 'INT NULL');

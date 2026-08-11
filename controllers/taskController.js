@@ -393,20 +393,30 @@ exports.status = async (req, res) => {
     });
 
     const newStatus = req.body.status;
-    const completedAt = newStatus === 'Completed' ? new Date() : null;
 
     // Update specific assignee status in junction table
-    await db.prepare('INSERT INTO task_assignees(task_id, user_id, status, completed_at) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE status=?, completed_at=?')
-        .run(task.id, req.session.user.id, newStatus, completedAt, newStatus, completedAt);
+    await db.prepare('INSERT INTO task_assignees(task_id, user_id, status, completed_at) VALUES(?,?,?,CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END) ON DUPLICATE KEY UPDATE status=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END')
+        .run(task.id, req.session.user.id, newStatus, newStatus, newStatus, newStatus);
 
-    // Check overall task completion status
-    const remaining = await db.prepare("SELECT COUNT(*) count FROM task_assignees WHERE task_id=? AND status<>'Completed'").get(task.id);
-    const overallStatus = (!remaining || remaining.count === 0) ? 'Completed' : 'In Progress';
-    await db.prepare('UPDATE tasks SET status=?, completed_at=? WHERE id=?').run(overallStatus, overallStatus === 'Completed' ? new Date() : null, task.id);
+    // Calculate overall task completion status for multi-assignees or single assignee
+    const assignedUserIds = String(task.assigned_to || '').split(',').map(x => Number(x.trim())).filter(Boolean);
+    let overallStatus = newStatus;
+
+    if (assignedUserIds.length > 1) {
+        const stats = await db.prepare("SELECT COUNT(*) total, SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) completed FROM task_assignees WHERE task_id=?").get(task.id);
+        const total = stats ? Number(stats.total) : 0;
+        const completed = stats ? Number(stats.completed) : 0;
+        const isAllCompleted = total > 0 && total === completed;
+        overallStatus = isAllCompleted ? 'Completed' : 'In Progress';
+    }
+
+    await db.prepare("UPDATE tasks SET status=?, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END, updated_by=? WHERE id=?")
+        .run(overallStatus, overallStatus, req.session.user.id, task.id);
 
     if (task.is_routine) {
-        await routineService.updateRoutineLogStatus(task.id, newStatus);
+        await routineService.updateRoutineLogStatus(task.id, overallStatus);
     }
+
     await activity.log(req.session.user.id, newStatus === 'Completed' ? 'Task Completed' : 'Task Updated', task.title);
     await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`);
     res.redirect(`/tasks/${task.id}?success=status`);
