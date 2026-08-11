@@ -288,36 +288,45 @@ exports.save = async (req, res) => {
         const assignedToStr = assignees.join(',');
         const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
         
-        const priorityRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=?').get(String(priority).toLowerCase());
-        const priorityId = (priorityRow && priorityRow.id !== undefined) ? priorityRow.id : 1;
-        const statusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get('pending');
-        const statusId = (statusRow && statusRow.id !== undefined) ? statusRow.id : 0;
+        let priorityId = 1; // Default Medium (1)
+        try {
+            const pVal = String(priority || '').toLowerCase().trim();
+            const priorityRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
+            if (priorityRow && priorityRow.id !== undefined) priorityId = Number(priorityRow.id);
+        } catch(e) {}
 
+        let statusId = 0; // Default Pending (0)
+        try {
+            const statusRow = await db.prepare("SELECT id FROM statuses WHERE normalized_name='pending' OR id=0").get();
+            if (statusRow && statusRow.id !== undefined) statusId = Number(statusRow.id);
+        } catch(e) {}
 
         const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
             pid, title, description, priorityId, priorityId, statusId, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
-        // Only insert into task_assignees table if task is assigned to MORE THAN 1 person (Multi-assignee tasks)
-        if (assignees.length > 1) {
-            for (const targetAssignee of assignees) {
-                await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status, status_id) VALUES(?,?,?,?)').run(taskId, targetAssignee, statusId, statusId);
-                await activity.log(req.session.user.id, 'Task Created', title);
-                if (Number(targetAssignee) !== Number(req.session.user.id)) {
-                    await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
+        try {
+            if (assignees.length > 1) {
+                for (const targetAssignee of assignees) {
+                    await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status, status_id) VALUES(?,?,?,?)').run(taskId, targetAssignee, statusId, statusId);
+                    try { await activity.log(req.session.user.id, 'Task Created', title); } catch(e) {}
+                    if (Number(targetAssignee) !== Number(req.session.user.id)) {
+                        try { await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`); } catch(e) {}
+                    }
+                }
+            } else {
+                const singleAssignee = assignees[0];
+                try { await activity.log(req.session.user.id, 'Task Created', title); } catch(e) {}
+                if (Number(singleAssignee) !== Number(req.session.user.id)) {
+                    try { await notifications.notify(singleAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`); } catch(e) {}
                 }
             }
-        } else {
-            const singleAssignee = assignees[0];
-            await activity.log(req.session.user.id, 'Task Created', title);
-            if (Number(singleAssignee) !== Number(req.session.user.id)) {
-                await notifications.notify(singleAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
-            }
+        } catch(e) {
+            console.error('Task notification error:', e);
         }
 
-
-        res.redirect(`/tasks/${taskId}`);
+        return res.redirect(`/tasks/${taskId}`);
     }
 };
 
