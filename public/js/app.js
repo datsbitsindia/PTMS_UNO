@@ -1,5 +1,50 @@
 
+document.addEventListener('click', (e) => {
+    const openBtn = e.target.closest('[data-open]');
+    if (openBtn) {
+        const id = openBtn.dataset.open;
+        const m = document.getElementById(id);
+        if (m) {
+            if (id === 'task-modal') {
+                const f = document.getElementById('single-task-form');
+                if (f) {
+                    f.reset();
+                    const inp = document.getElementById('task-id-input');
+                    if (inp) inp.value = '';
+                    const h = document.getElementById('task-form-heading');
+                    if (h) h.textContent = 'Assign employee task';
+                }
+            }
+            if (id === 'employee-modal') {
+                const f = document.getElementById('employee-form');
+                if (f) {
+                    f.reset();
+                    const inp = f.elements['id'];
+                    if (inp) inp.value = '';
+                    const h = document.getElementById('employee-title');
+                    if (h) h.textContent = 'Add Team Member';
+                    const n = document.getElementById('pwd-note');
+                    if (n) n.textContent = 'Required for new members';
+                }
+            }
+            m.classList.add('open');
+            m.classList.add('active');
+            if (window.initAllCKEditors) setTimeout(window.initAllCKEditors, 100);
+        }
+    }
+
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) {
+        const modal = closeBtn.closest('.modal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.classList.remove('active');
+        }
+    }
+});
+
 function initMasterAutocomplete() {
+
     document.querySelectorAll('.autocomplete-master').forEach(input => {
         if (input.dataset.autocompleteInited) return;
         input.dataset.autocompleteInited = 'true';

@@ -13,11 +13,7 @@ router.get('/api/departments',requireAuth,master.getDepartmentsAPI);
 router.get('/api/designations',requireAuth,master.getDesignationsAPI);
 router.post('/api/departments',requireAuth,requireManager,master.createDepartmentAPI);
 router.post('/api/designations',requireAuth,requireManager,master.createDesignationAPI);
-router.get('/master',requireAuth,requireManager,master.masterManagementPage);
-router.post('/master/departments/save',requireAuth,requireManager,master.saveDepartment);
-router.post('/master/designations/save',requireAuth,requireManager,master.saveDesignation);
-router.post('/master/departments/:id/toggle',requireAuth,requireManager,master.toggleDepartment);
-router.post('/master/designations/:id/toggle',requireAuth,requireManager,master.toggleDesignation);
 
 module.exports=router;
+
 

@@ -1,4 +1,8 @@
+const bcrypt = require('bcrypt');
+const { db } = require('../database/init');
+const activity = require('../services/activityService');
 const masterService = require('../services/masterService');
+
 
 exports.list = async (req, res) => {
     const currentUserRole = req.session.user.role;
