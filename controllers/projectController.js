@@ -169,14 +169,15 @@ exports.addUpdate = async (req, res) => {
         const allCompleted = stats && Number(stats.total) > 0 && Number(stats.total) === Number(stats.completed);
 
         const overallStatus = allCompleted ? 'Completed' : 'In Progress';
-        await db.prepare("UPDATE projects SET status=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
-            overallStatus, overallStatus, project.id
+        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
+            overallStatus, u.id, overallStatus, project.id
         );
     } else {
-        await db.prepare("UPDATE projects SET status=?, started_at=CASE WHEN ?='In Progress' AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
-            newStatus, newStatus, newStatus, project.id
+        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN ?='In Progress' AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
+            newStatus, u.id, newStatus, newStatus, project.id
         );
     }
+
 
     await activity.log(u.id, 'Project Daily Update', project.name);
     await notifications.notify(project.created_by, `${u.name} added an update to ${project.name}`, `/projects/${project.id}`);

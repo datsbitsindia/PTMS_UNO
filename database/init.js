@@ -76,6 +76,20 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
     } catch(e) {}
 
     try {
+        await pool.query(`DROP TRIGGER IF EXISTS ${prefix}projects_audit_update`);
+        await pool.query(`
+            CREATE TRIGGER ${prefix}projects_audit_update BEFORE UPDATE ON ${prefix}projects
+            FOR EACH ROW
+            BEGIN
+                IF NEW.updated_by IS NULL THEN
+                    SET NEW.updated_by = CAST(SUBSTRING_INDEX(NEW.manager_id, ',', 1) AS UNSIGNED);
+                END IF;
+            END
+        `);
+    } catch(e) {}
+
+
+    try {
         await pool.query(`DELETE FROM ${prefix}task_assignees WHERE task_id IN (SELECT task_id FROM (SELECT task_id FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) <= 1) tmp)`);
         await pool.query(`UPDATE ${prefix}tasks t JOIN (SELECT task_id, GROUP_CONCAT(user_id ORDER BY id SEPARATOR ',') AS all_ids FROM ${prefix}task_assignees GROUP BY task_id HAVING COUNT(*) > 1) ta ON ta.task_id = t.id SET t.assigned_to = ta.all_ids`);
     } catch(e) {}
