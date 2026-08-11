@@ -2,6 +2,26 @@ const { db } = require('../database/init');
 const activity = require('../services/activityService');
 const notifications = require('../services/notificationService');
 
+const statusMap = {
+    0: 'Pending',
+    1: 'In Progress',
+    2: 'Completed',
+    3: 'Cancelled',
+    4: 'Planned',
+    5: 'Generated',
+    6: 'Missed'
+};
+
+const resolveStatusName = (statusVal, statusIdVal) => {
+    if (statusMap[statusVal] !== undefined) return statusMap[statusVal];
+    if (statusMap[statusIdVal] !== undefined) return statusMap[statusIdVal];
+    if (typeof statusVal === 'number' || !isNaN(Number(statusVal))) {
+        const num = Number(statusVal);
+        if (statusMap[num] !== undefined) return statusMap[num];
+    }
+    return String(statusVal || 'In Progress');
+};
+
 exports.list = async (req, res) => {
     const u = req.session.user;
     const statusOrderSql = "ORDER BY CASE LOWER(p.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, p.created_at DESC";
@@ -20,8 +40,7 @@ exports.list = async (req, res) => {
     }
 
     const whereClause = whereConditions.length ? 'WHERE ' + whereConditions.join(' AND ') : '';
-    const rawProjects = await db.prepare(`SELECT p.*, COALESCE(st.name, 'Planned') AS status, (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count, CASE WHEN p.end_date<CURDATE() AND COALESCE(st.name, '') NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p LEFT JOIN statuses st ON st.id = p.status OR st.id = p.status_id ${whereClause} ${statusOrderSql}`).all(...params);
-
+    const rawProjects = await db.prepare(`SELECT p.*, (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count, CASE WHEN p.end_date<CURDATE() AND COALESCE(p.status, '') NOT IN ('Completed','Cancelled', '2', '3') THEN 1 ELSE 0 END is_overdue FROM projects p ${whereClause} ${statusOrderSql}`).all(...params);
 
     const allManagers = await db.prepare("SELECT id, name FROM users WHERE role='manager'").all();
     const managerMap = new Map(allManagers.map(m => [m.id, m.name]));
@@ -31,9 +50,11 @@ exports.list = async (req, res) => {
         const names = ids.map(id => managerMap.get(id) || `Manager #${id}`).join(', ');
         return {
             ...p,
+            status: resolveStatusName(p.status, p.status_id),
             manager_name: names || 'Unassigned'
         };
     });
+
 
     const managers = u.role === 'admin' ? await db.prepare("SELECT id, name, designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
     res.render('projects', {
@@ -114,10 +135,11 @@ exports.save = async (req, res) => {
 
 exports.detail = async (req, res) => {
     const u = req.session.user;
-    const project = await db.prepare("SELECT p.*, COALESCE(st.name, 'Planned') AS status, c.name creator_name FROM projects p LEFT JOIN statuses st ON st.id = p.status OR st.id = p.status_id JOIN users c ON c.id=p.created_by WHERE p.id=?").get(req.params.id);
-
+    const project = await db.prepare("SELECT p.*, c.name creator_name FROM projects p JOIN users c ON c.id=p.created_by WHERE p.id=?").get(req.params.id);
 
     if (!project) return res.status(404).render('error', { message: 'Project not found' });
+    project.status = resolveStatusName(project.status, project.status_id);
+
 
     const managerIds = String(project.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
     const isAssignedManager = managerIds.includes(u.id);

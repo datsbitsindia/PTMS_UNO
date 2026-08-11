@@ -326,9 +326,11 @@ exports.save = async (req, res) => {
             console.error('Task notification error:', e);
         }
 
-        return res.redirect(`/tasks/${taskId}`);
+        const redirectUrl = (req.headers.referer && !req.headers.referer.includes('/tasks/save')) ? req.headers.referer : `/tasks/${taskId}`;
+        return res.redirect(redirectUrl);
     }
 };
+
 
 
 

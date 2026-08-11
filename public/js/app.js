@@ -108,30 +108,36 @@ window.addAssigneeChip = function(selectEl, containerId, inputName) {
     const val = selectEl.value;
     if (!val) return;
     const opt = selectEl.options[selectEl.selectedIndex];
-    const name = opt.dataset.name || opt.text;
-    const role = opt.dataset.role || '';
+    const name = opt.getAttribute('data-name') || opt.dataset.name || opt.text;
+    const role = opt.getAttribute('data-role') || opt.dataset.role || '';
     const fieldName = inputName || 'assigned_to';
 
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    if (container.querySelector(`input[value="${val}"]`)) {
+    if (container.querySelector(`[data-assignee-id="${val}"], input[value="${val}"]`)) {
         selectEl.value = '';
         return;
     }
 
+    let chipClass = 'assignee-chip';
+    if (role === 'Manager') chipClass += ' chip-manager';
+    if (role === 'Self') chipClass += ' chip-self';
+
     const chip = document.createElement('span');
-    chip.className = `assignee-chip ${role === 'Manager' ? 'chip-manager' : ''}`;
-    chip.dataset.assigneeId = val;
+    chip.className = chipClass;
+    chip.setAttribute('data-assignee-id', val);
     chip.innerHTML = `
         <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
         <span>${name}</span>
         <input type="hidden" name="${fieldName}" value="${val}">
         <span class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</span>
     `;
+
     container.appendChild(chip);
     selectEl.value = '';
 };
+
 
 
 window.removeAssigneeChip = function(btnEl) {
@@ -482,41 +488,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Multi-Assignee Chip Selection Helpers
-window.addAssigneeChip = function(selectEl, chipsContainerId) {
-    const val = selectEl.value;
-    if (!val) return;
-    const opt = selectEl.options[selectEl.selectedIndex];
-    const name = opt.getAttribute('data-name') || opt.text;
-    const role = opt.getAttribute('data-role') || '';
-    const container = document.getElementById(chipsContainerId);
-    if (!container) return;
-
-    if (container.querySelector(`[data-assignee-id="${val}"]`)) {
-        selectEl.value = '';
-        return;
-    }
-
-    let chipClass = 'assignee-chip';
-    if (role === 'Manager') chipClass += ' chip-manager';
-    if (role === 'Self') chipClass += ' chip-self';
-
-    const chip = document.createElement('span');
-    chip.className = chipClass;
-    chip.setAttribute('data-assignee-id', val);
-    chip.innerHTML = `
-        <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
-        <span>${name}</span>
-        <input type="hidden" name="assigned_to" value="${val}">
-        <span class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</span>
-    `;
-
-    container.appendChild(chip);
-    selectEl.value = '';
-
-};
-
-
 window.removeAssigneeChip = function(btnEl) {
     const chip = btnEl.closest('.assignee-chip');
     if (chip) chip.remove();
 };
+
