@@ -20,7 +20,8 @@ exports.list = async (req, res) => {
     }
 
     const whereClause = whereConditions.length ? 'WHERE ' + whereConditions.join(' AND ') : '';
-    const rawProjects = await db.prepare(`SELECT p.*, (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count, CASE WHEN p.end_date<CURDATE() AND p.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p ${whereClause} ${statusOrderSql}`).all(...params);
+    const rawProjects = await db.prepare(`SELECT p.*, COALESCE(st.name, 'Planned') AS status, (SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count, CASE WHEN p.end_date<CURDATE() AND COALESCE(st.name, '') NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p LEFT JOIN statuses st ON st.id = p.status OR st.id = p.status_id ${whereClause} ${statusOrderSql}`).all(...params);
+
 
     const allManagers = await db.prepare("SELECT id, name FROM users WHERE role='manager'").all();
     const managerMap = new Map(allManagers.map(m => [m.id, m.name]));
@@ -113,7 +114,8 @@ exports.save = async (req, res) => {
 
 exports.detail = async (req, res) => {
     const u = req.session.user;
-    const project = await db.prepare('SELECT p.*, c.name creator_name FROM projects p JOIN users c ON c.id=p.created_by WHERE p.id=?').get(req.params.id);
+    const project = await db.prepare("SELECT p.*, COALESCE(st.name, 'Planned') AS status, c.name creator_name FROM projects p LEFT JOIN statuses st ON st.id = p.status OR st.id = p.status_id JOIN users c ON c.id=p.created_by WHERE p.id=?").get(req.params.id);
+
 
     if (!project) return res.status(404).render('error', { message: 'Project not found' });
 

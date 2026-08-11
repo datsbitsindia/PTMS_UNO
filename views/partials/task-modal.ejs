@@ -118,8 +118,8 @@
                         <button type="button" class="btn" data-close>
                             Cancel
                         </button>
-                        <button class="btn primary">
-                            <i class="fa-solid fa-plus"></i> Create Task
+                        <button type="submit" class="btn primary">
+                            <%= user.role === 'employee' ? 'Create Self Task' : 'Assign Task' %>
                         </button>
                     </div>
 
@@ -127,91 +127,86 @@
 
             </div>
 
-            <!-- Routine Task Form (For Manager) -->
-            <% if (user.role === 'manager') { %>
+            <!-- Daily Routine Form -->
             <div class="modal-tab-content" id="routine-tab">
 
-                <h2><i class="fa-solid fa-repeat" style="color: #4f46e5;"></i> Create Daily Routine Task</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Automate daily repetitive tasks for your team.</p>
+                <h2><i class="fa-solid fa-repeat" style="color: #f59e0b;"></i> Assign Daily Routine Task</h2>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Set up a daily task schedule for employee within a specific timeline range.</p>
 
                 <form action="/tasks/routine/save" method="POST" class="form-grid">
 
                     <label class="full">
                         Project
                         <select name="project_id" required>
-                            <option value="">Select Project</option>
-                            <% projects.forEach(p => { %>
-                                <option value="<%= p.id %>">
-                                    <%= p.name %>
-                                </option>
+                            <option value="">Select Project...</option>
+                            <% projects.filter(p => p.name !== 'Self Task').forEach(p => { %>
+                                <option value="<%= p.id %>"><%= p.name %></option>
                             <% }) %>
                         </select>
                     </label>
 
                     <label class="full">
-                        Assignee
-                        <select name="assigned_to" required>
-                            <option value="">Select Employee</option>
-                            <% (typeof employees !== 'undefined' ? employees : []).forEach(e => { %>
-                                <option value="<%= e.id %>">
-                                    <%= e.name %> (<%= e.designation || 'Employee' %>)
-                                </option>
-                            <% }) %>
-                        </select>
+                        Routine Task Title
+                        <input name="title" placeholder="e.g. Daily Social Media Post / Inspection" required>
                     </label>
 
                     <label class="full">
-                        Routine Task title
-                        <input name="title" placeholder="e.g. Daily Standup & Progress Log" required>
-                    </label>
-
-                    <label class="full">
-                        <span>Description</span>
+                        <span>Details / Instructions</span>
                         <textarea name="description" class="ck-editor-target" rows="3"></textarea>
                     </label>
+
+                    <% if (typeof employees !== 'undefined' && employees.length) { %>
+                    <label class="full">
+                        Assignee (Employee)
+                        <select name="assigned_to" required>
+                            <option value="">Select Employee...</option>
+                            <% employees.forEach(e => { %>
+                                <option value="<%= e.id %>"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
+                            <% }) %>
+                        </select>
+                    </label>
+                    <% } %>
 
                     <label>
                         Priority
                         <select name="priority">
-                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
-                                <option <%= x === 'High' ? 'selected' : '' %>><%= x %></option>
-                            <% }) %>
+                            <option value="High" selected>High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                            <option value="Critical">Critical</option>
                         </select>
                     </label>
 
                     <label>
-                        Daily Trigger Time
-                        <input type="time" name="daily_time" value="09:00" required>
-                    </label>
-
-                    <label>
-                        Repeat Schedule
-                        <select name="repeat_type">
-                            <option value="Daily">Daily (Everyday)</option>
-                            <option value="Mon-Fri">Monday to Friday</option>
-                        </select>
-                    </label>
-
-                    <label>
-                        Estimated Hours / Day
-                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 1.0">
-                    </label>
-
-                    <label>
-                        Start Date
+                        Timeline Start Date
                         <input type="date" name="start_date" required>
                     </label>
 
                     <label>
-                        End Date
+                        Timeline End Date
                         <input type="date" name="end_date" required>
+                    </label>
+
+                    <label>
+                        Estimated Hours (Daily)
+                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 1.0">
+                    </label>
+
+                    <label>
+                        Daily Assignment Time
+                        <input type="time" name="daily_time" value="09:00" required>
+                    </label>
+
+                    <label class="full" style="display: flex; align-items: center; gap: 8px; margin-top: 0.5rem;">
+                        <input type="checkbox" name="mandatory" value="1" checked style="width: auto; height: 18px;">
+                        <span style="font-weight: 500; font-size: 0.9rem;">High Priority (Must Complete First Every Morning)</span>
                     </label>
 
                     <div class="full actions" style="margin-top: 1rem;">
                         <button type="button" class="btn" data-close>
                             Cancel
                         </button>
-                        <button class="btn primary">
+                        <button type="submit" class="btn primary">
                             <i class="fa-solid fa-check"></i> Assign Daily Routine Task
                         </button>
                     </div>
@@ -219,11 +214,11 @@
                 </form>
 
             </div>
-            <% } %>
 
         </div>
 
     </div>
+
 
     <script>
     document.querySelectorAll('.modal-tab').forEach(tab => {
@@ -236,6 +231,17 @@
             const content = document.getElementById(tab.dataset.tab);
             if (content) content.classList.add('active');
         });
+    });
+
+    document.getElementById('single-task-form')?.addEventListener('submit', function(e) {
+        const chipContainer = document.getElementById('single-task-assignee-chips');
+        if (chipContainer && !chipContainer.querySelector('input[name="assigned_to"]')) {
+            const defaultInput = document.createElement('input');
+            defaultInput.type = 'hidden';
+            defaultInput.name = 'assigned_to';
+            defaultInput.value = '<%= user.id %>';
+            chipContainer.appendChild(defaultInput);
+        }
     });
     </script>
 
