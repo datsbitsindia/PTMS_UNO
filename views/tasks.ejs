@@ -170,15 +170,15 @@
 
 <section class="ui-panel">
 
-    <div class="task-type-tabs-container" style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
-        <button type="button" class="btn task-tab-btn active" data-task-tab="all" onclick="filterTaskType('all', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600;">
+    <div class="task-type-tabs-container" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; width: 100% !important; gap: 6px !important; margin-bottom: 12px !important;">
+        <button type="button" class="btn task-tab-btn active" data-task-tab="all" onclick="filterTaskType('all', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important;">
             <i class="fa-solid fa-list-check"></i> All Tasks (<%= tasks.length %>)
         </button>
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; opacity: 0.85;">
-            <i class="fa-solid fa-inbox"></i> 📥 My Tasks / To Do (<%= assignedToMeTasks.length %>)
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important;">
+            <i class="fa-solid fa-inbox"></i> My Tasks / To Do (<%= assignedToMeTasks.length %>)
         </button>
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600; background: #fefce8; color: #a16207; border: 1px solid #fef08a; opacity: 0.85;">
-            <i class="fa-solid fa-paper-plane"></i> 📤 Assigned by Me (<%= assignedByMeTasks.length %>)
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #fefce8 !important; color: #a16207 !important; border: 1px solid #fef08a !important;">
+            <i class="fa-solid fa-paper-plane"></i> Assigned by Me (<%= assignedByMeTasks.length %>)
         </button>
     </div>
 
@@ -323,25 +323,17 @@
 window.filterTaskType = function(type, btn) {
     document.querySelectorAll('.task-tab-btn').forEach(b => {
         b.classList.remove('active');
-        b.style.opacity = '0.75';
     });
     if (btn) {
         btn.classList.add('active');
-        btn.style.opacity = '1';
     }
-
-    document.querySelectorAll('.task-card').forEach(card => {
-        const group = card.dataset.filterGroup;
-        if (type === 'all') {
-            card.style.display = '';
-        } else if (type === 'assigned-to-me') {
-            card.style.display = (group === 'assigned-to-me' || group === 'self') ? '' : 'none';
-        } else if (type === 'assigned-by-me') {
-            card.style.display = (group === 'assigned-by-me') ? '' : 'none';
-        }
-    });
+    const bar = document.querySelector('.compact-filter');
+    if (bar && window.applyCompactFilter) {
+        window.applyCompactFilter(bar);
+    }
 };
 </script>
+
 
 <%- include('partials/task-modal') %>
 
