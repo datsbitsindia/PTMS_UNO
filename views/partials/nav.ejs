@@ -24,9 +24,10 @@
 
         <% if (user.role === 'manager' || user.role === 'admin') { %>
             <a href="/employees" class="<%= page === 'employees' || page === 'managers' ? 'active' : '' %>">
-                <i class="fa-solid fa-users"></i>Users & Team
+                <i class="fa-solid fa-users"></i>Teams
             </a>
         <% } %>
+
 
 
 

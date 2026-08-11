@@ -14,9 +14,6 @@
                     <button type="button" class="modal-tab" data-tab="routine-tab">
                         <i class="fa-solid fa-repeat"></i> Daily Routine
                     </button>
-                    <button type="button" class="modal-tab" data-tab="manager-task-tab">
-                        <i class="fa-solid fa-user-tie"></i> Assign Manager
-                    </button>
                 </div>
                 <button class="modal-close" data-close>&times;</button>
             </div>
@@ -29,8 +26,6 @@
 
             <!-- Single Regular Task Form -->
             <div class="modal-tab-content active" id="single-task-tab">
-
-                <h2 id="task-form-heading"><%= user.role === 'employee' ? 'Add Task' : 'Assign employee task' %></h2>
 
                 <form
                     action="/tasks/save"
@@ -56,7 +51,7 @@
                         Task title
                         <input
                             name="title"
-                            placeholder="<%= user.role === 'employee' ? 'Enter task title...' : 'Task title' %>"
+                            placeholder="Enter task title..."
                             required
                         >
                     </label>
@@ -70,7 +65,7 @@
                         ></textarea>
                     </label>
 
-                    <% if (user.role === 'manager' && typeof employees !== 'undefined') { %>
+                    <% if (typeof employees !== 'undefined' || typeof managers !== 'undefined') { %>
                     <label class="full">
                         <span>Assignees / Team Members (Select Multiple)</span>
                         <div class="multi-assignee-picker">
@@ -97,17 +92,6 @@
                     </label>
                     <% } else { %>
                         <input type="hidden" name="assigned_to" value="<%= user.id %>">
-                        <label class="full">
-                            Report To (Manager / Admin)
-                            <select name="report_to">
-                                <option value="">Select Manager / Admin to report...</option>
-                                <% (typeof reportingUsers !== 'undefined' ? reportingUsers : []).forEach(u => { %>
-                                    <option value="<%= u.id %>">
-                                        <%= u.name %> (<%= u.role === 'admin' ? 'Admin' : (u.designation || 'Manager') %>)
-                                    </option>
-                                <% }) %>
-                            </select>
-                        </label>
                     <% } %>
 
                     <label>
@@ -121,33 +105,20 @@
 
                     <label>
                         Estimated Hours
-                        <input
-                            type="number"
-                            name="estimated_hours"
-                            min="0"
-                            step="0.5"
-                        >
+                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 2.5">
                     </label>
 
                     <label>
                         Due date
-                        <input
-                            type="date"
-                            name="due_date"
-                            required
-                        >
+                        <input type="date" name="due_date" required>
                     </label>
 
-                    <div class="full actions">
-                        <button
-                            type="button"
-                            class="btn"
-                            data-close
-                        >
+                    <div class="full actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn" data-close>
                             Cancel
                         </button>
                         <button class="btn primary">
-                            <%= user.role === 'employee' ? 'Create Self Task' : 'Assign Task' %>
+                            <i class="fa-solid fa-plus"></i> Create Task
                         </button>
                     </div>
 
@@ -155,18 +126,19 @@
 
             </div>
 
-            <!-- Daily Routine Form -->
+            <!-- Routine Task Form (For Manager) -->
+            <% if (user.role === 'manager') { %>
             <div class="modal-tab-content" id="routine-tab">
 
-                <h2><i class="fa-solid fa-repeat" style="color: #f59e0b;"></i> Assign Daily Routine Task</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Set up a daily task schedule for employee within a specific timeline range.</p>
+                <h2><i class="fa-solid fa-repeat" style="color: #4f46e5;"></i> Create Daily Routine Task</h2>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Automate daily repetitive tasks for your team.</p>
 
                 <form action="/tasks/routine/save" method="POST" class="form-grid">
 
                     <label class="full">
                         Project
-                        <select name="project_id">
-                            <option value="">Normal Task (No Project)</option>
+                        <select name="project_id" required>
+                            <option value="">Select Project</option>
                             <% projects.forEach(p => { %>
                                 <option value="<%= p.id %>">
                                     <%= p.name %>
@@ -176,29 +148,25 @@
                     </label>
 
                     <label class="full">
-                        Task title
-                        <input name="title" placeholder="e.g., Morning Code Review & Daily Status Update" required>
+                        Assignee
+                        <select name="assigned_to" required>
+                            <option value="">Select Employee</option>
+                            <% (typeof employees !== 'undefined' ? employees : []).forEach(e => { %>
+                                <option value="<%= e.id %>">
+                                    <%= e.name %> (<%= e.designation || 'Employee' %>)
+                                </option>
+                            <% }) %>
+                        </select>
+                    </label>
+
+                    <label class="full">
+                        Routine Task title
+                        <input name="title" placeholder="e.g. Daily Standup & Progress Log" required>
                     </label>
 
                     <label class="full">
                         <span>Description</span>
-                        <textarea name="description" class="ck-editor-target" rows="3" placeholder="Describe the routine tasks employee must perform every morning..."></textarea>
-                    </label>
-
-                    <label class="full">
-                        <span>Assignees / Team Members (Select Multiple)</span>
-                        <div class="multi-assignee-picker">
-                            <div class="assignees-chips-list" id="routine-task-assignee-chips"></div>
-                            <select class="assignee-select-dropdown" onchange="addAssigneeChip(this, 'routine-task-assignee-chips')">
-                                <option value="">+ Select Employee or Manager to add...</option>
-                                <% employees.forEach(e => { %>
-                                    <option value="<%= e.id %>" data-name="<%= e.name %>" data-role="Employee"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
-                                <% }) %>
-                                <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
-                                    <option value="<%= m.id %>" data-name="<%= m.name %>" data-role="Manager"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
-                                <% }) %>
-                            </select>
-                        </div>
+                        <textarea name="description" class="ck-editor-target" rows="3"></textarea>
                     </label>
 
                     <label>
@@ -211,28 +179,31 @@
                     </label>
 
                     <label>
-                        Timeline Start Date
-                        <input type="date" name="start_date" required>
+                        Daily Trigger Time
+                        <input type="time" name="daily_time" value="09:00" required>
                     </label>
 
                     <label>
-                        Timeline End Date
-                        <input type="date" name="end_date" required>
+                        Repeat Schedule
+                        <select name="repeat_type">
+                            <option value="Daily">Daily (Everyday)</option>
+                            <option value="Mon-Fri">Monday to Friday</option>
+                        </select>
                     </label>
 
                     <label>
-                        Estimated Hours (Daily)
+                        Estimated Hours / Day
                         <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 1.0">
                     </label>
 
                     <label>
-                        Daily Assignment Time
-                        <input type="time" name="daily_time" value="09:00" required>
+                        Start Date
+                        <input type="date" name="start_date" required>
                     </label>
 
-                    <label class="full" style="display: flex; align-items: center; gap: 8px; margin-top: 0.5rem;">
-                        <input type="checkbox" name="mandatory" value="1" checked style="width: auto; height: 18px;">
-                        <span style="font-weight: 500; font-size: 0.9rem;">High Priority (Must Complete First Every Morning)</span>
+                    <label>
+                        End Date
+                        <input type="date" name="end_date" required>
                     </label>
 
                     <div class="full actions" style="margin-top: 1rem;">
@@ -247,81 +218,7 @@
                 </form>
 
             </div>
-
-            <!-- Manager Task Form -->
-            <div class="modal-tab-content" id="manager-task-tab">
-
-                <h2><i class="fa-solid fa-user-tie" style="color: #6366f1;"></i> Assign Task to Manager</h2>
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">Assign a high-level task or project responsibility to another Manager.</p>
-
-                <form action="/tasks/save" method="POST" class="form-grid">
-
-                    <label class="full">
-                        Project
-                        <select name="project_id">
-                            <option value="">Normal Task (No Project)</option>
-                            <% (typeof projects !== 'undefined' ? projects : []).forEach(p => { %>
-                                <option value="<%= p.id %>">
-                                    <%= p.name %>
-                                </option>
-                            <% }) %>
-                        </select>
-                    </label>
-
-                    <label class="full">
-                        Task title
-                        <input name="title" placeholder="e.g. Lead Sprint Planning & Architecture Review" required>
-                    </label>
-
-                    <label class="full">
-                        <span>Description</span>
-                        <textarea name="description" class="ck-editor-target" rows="3" placeholder="Provide details, scope, and objectives for the manager..."></textarea>
-                    </label>
-
-                    <label class="full">
-                        <span>Assign Managers (Select Multiple)</span>
-                        <div class="multi-assignee-picker">
-                            <div class="assignees-chips-list" id="manager-task-assignee-chips"></div>
-                            <select class="assignee-select-dropdown" onchange="addAssigneeChip(this, 'manager-task-assignee-chips')">
-                                <option value="">+ Select Manager to add...</option>
-                                <% (typeof managers !== 'undefined' ? managers : []).filter(m => m.id !== user.id).forEach(m => { %>
-                                    <option value="<%= m.id %>" data-name="<%= m.name %>" data-role="Manager"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
-                                <% }) %>
-                            </select>
-                        </div>
-                    </label>
-
-                    <label>
-                        Priority
-                        <select name="priority">
-                            <% ['Low','Medium','High','Critical'].forEach(x=>{ %>
-                                <option <%= x === 'High' ? 'selected' : '' %>><%= x %></option>
-                            <% }) %>
-                        </select>
-                    </label>
-
-                    <label>
-                        Estimated Hours
-                        <input type="number" name="estimated_hours" min="0" step="0.5" placeholder="e.g. 5.0">
-                    </label>
-
-                    <label>
-                        Due date
-                        <input type="date" name="due_date" required>
-                    </label>
-
-                    <div class="full actions" style="margin-top: 1rem;">
-                        <button type="button" class="btn" data-close>
-                            Cancel
-                        </button>
-                        <button class="btn primary">
-                            <i class="fa-solid fa-user-tie"></i> Assign Task to Manager
-                        </button>
-                    </div>
-
-                </form>
-
-            </div>
+            <% } %>
 
         </div>
 
