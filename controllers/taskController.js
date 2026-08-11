@@ -252,8 +252,16 @@ exports.save = async (req, res) => {
         if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
 
         const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
-        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
-            pid, title, description, priority, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
+
+        let updPriorityId = 1;
+        try {
+            const pVal = String(priority || '').toLowerCase().trim();
+            const pRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
+            if (pRow && pRow.id !== undefined) updPriorityId = Number(pRow.id);
+        } catch(e) {}
+
+        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,priority_id=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
+            pid, title, description, updPriorityId, updPriorityId, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
         );
 
         for (const targetAssignee of assignees) {
@@ -302,7 +310,7 @@ exports.save = async (req, res) => {
         } catch(e) {}
 
         const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priority, priorityId, 'Pending', statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
+            pid, title, description, priorityId, priorityId, statusId, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
