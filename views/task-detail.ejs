@@ -333,7 +333,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const chatForm = document.querySelector('.chat-input-form');
     if (chatForm) {
+        const textarea = chatForm.querySelector('textarea');
+        if (textarea) {
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (textarea.value.trim()) {
+                        if (chatForm.requestSubmit) {
+                            chatForm.requestSubmit();
+                        } else {
+                            chatForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        }
+                    }
+                }
+            });
+        }
+
         chatForm.addEventListener('submit', async (e) => {
+
             e.preventDefault();
             const textarea = chatForm.querySelector('textarea');
             const msg = textarea.value.trim();

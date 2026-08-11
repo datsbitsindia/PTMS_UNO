@@ -8,43 +8,34 @@
     const overdueProjectsCount = projects.filter(p => p.is_overdue).length;
 %>
 
-<div class="metrics-grid compact-kpi-grid" style="margin-bottom: 14px;">
-    <div class="metric-card" onclick="filterByKpi('all', event)" style="cursor: pointer;">
-        <i class="fa-solid fa-folder-open icon"></i>
-        <div>
-            <strong><%= totalProjectsCount %></strong>
-            <span>Total Projects</span>
-        </div>
+<div class="metric-grid task-kpis five">
+    <div class="metric-card" onclick="filterByKpi('all', event)" title="Click to show all projects">
+        <i class="fa-solid fa-folder-open"></i>
+        <b><%= totalProjectsCount %></b>
+        <span>Total Projects</span>
     </div>
-    <div class="metric-card" onclick="filterByKpi('planned', event)" style="cursor: pointer;">
-        <i class="fa-solid fa-clock icon" style="color: #ea580c;"></i>
-        <div>
-            <strong><%= plannedProjectsCount %></strong>
-            <span>Planned</span>
-        </div>
+    <div class="metric-card orange" onclick="filterByKpi('Planned', event)" title="Click to filter Planned projects">
+        <i class="fa-regular fa-clock"></i>
+        <b><%= plannedProjectsCount %></b>
+        <span>Planned</span>
     </div>
-    <div class="metric-card" onclick="filterByKpi('in progress', event)" style="cursor: pointer;">
-        <i class="fa-solid fa-spinner icon" style="color: #2563eb;"></i>
-        <div>
-            <strong><%= inProgressProjectsCount %></strong>
-            <span>In Progress</span>
-        </div>
+    <div class="metric-card" onclick="filterByKpi('In Progress', event)" title="Click to filter In Progress projects">
+        <i class="fa-solid fa-spinner"></i>
+        <b><%= inProgressProjectsCount %></b>
+        <span>In Progress</span>
     </div>
-    <div class="metric-card" onclick="filterByKpi('completed', event)" style="cursor: pointer;">
-        <i class="fa-solid fa-circle-check icon" style="color: #16a34a;"></i>
-        <div>
-            <strong><%= completedProjectsCount %></strong>
-            <span>Completed</span>
-        </div>
+    <div class="metric-card green" onclick="filterByKpi('Completed', event)" title="Click to filter Completed projects">
+        <i class="fa-regular fa-circle-check"></i>
+        <b><%= completedProjectsCount %></b>
+        <span>Completed</span>
     </div>
-    <div class="metric-card" onclick="filterByKpi('overdue', event)" style="cursor: pointer;">
-        <i class="fa-solid fa-triangle-exclamation icon" style="color: #dc2626;"></i>
-        <div>
-            <strong><%= overdueProjectsCount %></strong>
-            <span>Overdue</span>
-        </div>
+    <div class="metric-card red" onclick="filterByKpi('Overdue', event)" title="Click to filter Overdue projects">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <b><%= overdueProjectsCount %></b>
+        <span>Overdue</span>
     </div>
 </div>
+
 
 <div class="toolbar-ui compact-filter"><input type="search" placeholder="Search projects..."><select><option>All Status</option><option>Planned</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select><button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button></div>
 
