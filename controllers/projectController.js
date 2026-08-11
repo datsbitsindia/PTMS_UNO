@@ -2,25 +2,30 @@ const { db } = require('../database/init');
 const activity = require('../services/activityService');
 const notifications = require('../services/notificationService');
 
-const statusMap = {
-    0: 'Pending',
-    1: 'In Progress',
-    2: 'Completed',
-    3: 'Cancelled',
-    4: 'Planned',
-    5: 'Generated',
-    6: 'Missed'
+const resolveStatusName = (statusVal, statusIdVal) => {
+    if (statusVal !== null && statusVal !== undefined) {
+        const strVal = String(statusVal).trim().toLowerCase();
+        if (strVal === '0' || strVal === 'pending') return 'Pending';
+        if (strVal === '1' || strVal === 'in progress') return 'In Progress';
+        if (strVal === '2' || strVal === 'completed') return 'Completed';
+        if (strVal === '3' || strVal === 'cancelled') return 'Cancelled';
+        if (strVal === '4' || strVal === 'planned') return 'Planned';
+        if (strVal === '5' || strVal === 'generated') return 'Generated';
+        if (strVal === '6' || strVal === 'missed') return 'Missed';
+    }
+    if (statusIdVal !== null && statusIdVal !== undefined) {
+        const strId = String(statusIdVal).trim();
+        if (strId === '0') return 'Pending';
+        if (strId === '1') return 'In Progress';
+        if (strId === '2') return 'Completed';
+        if (strId === '3') return 'Cancelled';
+        if (strId === '4') return 'Planned';
+        if (strId === '5') return 'Generated';
+        if (strId === '6') return 'Missed';
+    }
+    return 'In Progress';
 };
 
-const resolveStatusName = (statusVal, statusIdVal) => {
-    if (statusMap[statusVal] !== undefined) return statusMap[statusVal];
-    if (statusMap[statusIdVal] !== undefined) return statusMap[statusIdVal];
-    if (typeof statusVal === 'number' || !isNaN(Number(statusVal))) {
-        const num = Number(statusVal);
-        if (statusMap[num] !== undefined) return statusMap[num];
-    }
-    return String(statusVal || 'In Progress');
-};
 
 exports.list = async (req, res) => {
     const u = req.session.user;

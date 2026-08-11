@@ -170,15 +170,16 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
             }
         }
 
-        await pool.query(`UPDATE ${prefix}projects SET status_id = status`);
-        await pool.query(`UPDATE ${prefix}project_assignees SET status_id = status`);
-        await pool.query(`UPDATE ${prefix}tasks SET priority_id = priority, status_id = status`);
-        await pool.query(`UPDATE ${prefix}task_assignees SET status_id = status`);
-        await pool.query(`UPDATE ${prefix}daily_routines SET priority_id = priority`);
-        await pool.query(`UPDATE ${prefix}daily_routine_logs SET status_id = status`);
+        try { await pool.query(`UPDATE ${prefix}projects SET status_id = status WHERE status REGEXP '^[0-9]+$'`); } catch(e) {}
+        try { await pool.query(`UPDATE ${prefix}project_assignees SET status_id = status WHERE status REGEXP '^[0-9]+$'`); } catch(e) {}
+        try { await pool.query(`UPDATE ${prefix}tasks SET priority_id = CASE WHEN priority REGEXP '^[0-9]+$' THEN priority ELSE priority_id END, status_id = CASE WHEN status REGEXP '^[0-9]+$' THEN status ELSE status_id END`); } catch(e) {}
+        try { await pool.query(`UPDATE ${prefix}task_assignees SET status_id = status WHERE status REGEXP '^[0-9]+$'`); } catch(e) {}
+        try { await pool.query(`UPDATE ${prefix}daily_routines SET priority_id = priority WHERE priority REGEXP '^[0-9]+$'`); } catch(e) {}
+        try { await pool.query(`UPDATE ${prefix}daily_routine_logs SET status_id = status WHERE status REGEXP '^[0-9]+$'`); } catch(e) {}
     } catch(e) {
         console.error('Priority/Status master table sync error:', e);
     }
+
 
 
 
