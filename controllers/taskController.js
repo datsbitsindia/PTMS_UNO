@@ -46,7 +46,6 @@ const canView = async (u, t) => {
 
 exports.list = async (req, res) => {
     const u = req.session.user;
-    if (u.role === 'admin') return res.redirect('/projects');
     
     // Auto sync daily routine tasks for today
     await routineService.syncDailyRoutines();
@@ -326,8 +325,7 @@ exports.save = async (req, res) => {
             console.error('Task notification error:', e);
         }
 
-        const redirectUrl = (req.headers.referer && !req.headers.referer.includes('/tasks/save')) ? req.headers.referer : `/tasks/${taskId}`;
-        return res.redirect(redirectUrl);
+        return res.redirect(`/tasks/${taskId}`);
     }
 };
 
