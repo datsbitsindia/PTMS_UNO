@@ -135,16 +135,32 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
             await pool.query(`INSERT IGNORE INTO ${prefix}statuses (name, normalized_name, category, active) VALUES (?, ?, ?, 1)`, [sName, sNorm, sCat]);
         }
 
-        await pool.query(`UPDATE ${prefix}projects p JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(p.status)) SET p.status_id = s.id WHERE p.status_id IS NULL OR p.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}project_assignees pa JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(pa.status)) SET pa.status_id = s.id WHERE pa.status_id IS NULL OR pa.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}priorities pr ON pr.normalized_name = LOWER(TRIM(t.priority)) SET t.priority_id = pr.id WHERE t.priority_id IS NULL OR t.priority_id = 0`);
-        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(t.status)) SET t.status_id = s.id WHERE t.status_id IS NULL OR t.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}task_assignees ta JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(ta.status)) SET ta.status_id = s.id WHERE ta.status_id IS NULL OR ta.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}daily_routines dr JOIN ${prefix}priorities pr ON pr.normalized_name = LOWER(TRIM(dr.priority)) SET dr.priority_id = pr.id WHERE dr.priority_id IS NULL OR dr.priority_id = 0`);
-        await pool.query(`UPDATE ${prefix}daily_routine_logs drl JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(drl.status)) SET drl.status_id = s.id WHERE drl.status_id IS NULL OR drl.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}projects p JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(p.status)) OR s.id = p.status_id) SET p.status_id = s.id WHERE p.status_id IS NULL OR p.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}project_assignees pa JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(pa.status)) OR s.id = pa.status_id) SET pa.status_id = s.id WHERE pa.status_id IS NULL OR pa.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}priorities pr ON (pr.normalized_name = LOWER(TRIM(t.priority)) OR pr.id = t.priority_id) SET t.priority_id = pr.id WHERE t.priority_id IS NULL OR t.priority_id = 0`);
+        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(t.status)) OR s.id = t.status_id) SET t.status_id = s.id WHERE t.status_id IS NULL OR t.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}task_assignees ta JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(ta.status)) OR s.id = ta.status_id) SET ta.status_id = s.id WHERE ta.status_id IS NULL OR ta.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}daily_routines dr JOIN ${prefix}priorities pr ON (pr.normalized_name = LOWER(TRIM(dr.priority)) OR pr.id = dr.priority_id) SET dr.priority_id = pr.id WHERE dr.priority_id IS NULL OR dr.priority_id = 0`);
+        await pool.query(`UPDATE ${prefix}daily_routine_logs drl JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(drl.status)) OR s.id = drl.status_id) SET drl.status_id = s.id WHERE drl.status_id IS NULL OR drl.status_id = 0`);
+
+        await pool.query(`ALTER TABLE ${prefix}projects MODIFY status INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}project_assignees MODIFY status INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}tasks MODIFY priority INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}tasks MODIFY status INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}task_assignees MODIFY status INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}daily_routines MODIFY priority INT NULL`);
+        await pool.query(`ALTER TABLE ${prefix}daily_routine_logs MODIFY status INT NULL`);
+
+        await pool.query(`UPDATE ${prefix}projects SET status = status_id WHERE status IS NULL OR status != status_id`);
+        await pool.query(`UPDATE ${prefix}project_assignees SET status = status_id WHERE status IS NULL OR status != status_id`);
+        await pool.query(`UPDATE ${prefix}tasks SET priority = priority_id, status = status_id WHERE priority IS NULL OR priority != priority_id OR status IS NULL OR status != status_id`);
+        await pool.query(`UPDATE ${prefix}task_assignees SET status = status_id WHERE status IS NULL OR status != status_id`);
+        await pool.query(`UPDATE ${prefix}daily_routines SET priority = priority_id WHERE priority IS NULL OR priority != priority_id`);
+        await pool.query(`UPDATE ${prefix}daily_routine_logs SET status = status_id WHERE status IS NULL OR status != status_id`);
     } catch(e) {
         console.error('Priority/Status master table sync error:', e);
     }
+
 
     try {
         const [usersToMigrate] = await pool.query(`SELECT id, department, designation, department_id, designation_id FROM ${prefix}users`);
