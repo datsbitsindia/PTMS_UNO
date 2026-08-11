@@ -193,6 +193,9 @@ exports.addUpdate = async (req, res) => {
     await db.prepare('INSERT INTO project_updates(project_id,manager_id,message,progress_percent) VALUES(?,?,?,?)').run(project.id, u.id, message, progress);
 
     const newStatus = progress >= 100 ? 'Completed' : progress > 0 ? 'In Progress' : 'Planned';
+    // projects.status is INT — map text to numeric ID
+    const statusToId = { 'Pending': 0, 'In Progress': 1, 'Completed': 2, 'Cancelled': 3, 'Planned': 4 };
+    const newStatusId = statusToId[newStatus] ?? 1;
 
     if (managerIds.length > 1) {
         try {
@@ -205,12 +208,13 @@ exports.addUpdate = async (req, res) => {
         const allCompleted = stats && Number(stats.total) > 0 && Number(stats.total) === Number(stats.completed);
 
         const overallStatus = allCompleted ? 'Completed' : 'In Progress';
-        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
-            overallStatus, u.id, overallStatus, project.id
+        const overallStatusId = statusToId[overallStatus] ?? 1;
+        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
+            overallStatusId, u.id, overallStatusId, project.id
         );
     } else {
-        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN ?='In Progress' AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END WHERE id=?").run(
-            newStatus, u.id, newStatus, newStatus, project.id
+        await db.prepare("UPDATE projects SET status=?, updated_by=?, started_at=CASE WHEN ?=1 AND started_at IS NULL THEN NOW() ELSE started_at END, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END WHERE id=?").run(
+            newStatusId, u.id, newStatusId, newStatusId, project.id
         );
     }
 
