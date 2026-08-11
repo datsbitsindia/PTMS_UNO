@@ -283,16 +283,20 @@ exports.save = async (req, res) => {
         const assignedToStr = assignees.join(',');
         const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
         
-        // Single Task Entry inserted into tasks table with comma-separated assigned_to e.g. "6,7"
-        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,status,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priority, 'Pending', due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
+        const priorityRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=?').get(String(priority).toLowerCase());
+        const priorityId = priorityRow ? priorityRow.id : null;
+        const statusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get('pending');
+        const statusId = statusRow ? statusRow.id : null;
+
+        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
+            pid, title, description, priority, priorityId, 'Pending', statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
         // Only insert into task_assignees table if task is assigned to MORE THAN 1 person (Multi-assignee tasks)
         if (assignees.length > 1) {
             for (const targetAssignee of assignees) {
-                await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(taskId, targetAssignee, 'Pending');
+                await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status, status_id) VALUES(?,?,?,?)').run(taskId, targetAssignee, 'Pending', statusId);
                 await activity.log(req.session.user.id, 'Task Created', title);
                 if (Number(targetAssignee) !== Number(req.session.user.id)) {
                     await notifications.notify(targetAssignee, `New task assigned: ${title}`, `/tasks/${taskId}`);
@@ -309,6 +313,7 @@ exports.save = async (req, res) => {
         res.redirect(`/tasks/${taskId}`);
     }
 };
+
 
 
 exports.saveRoutine = async (req, res) => {
@@ -393,10 +398,12 @@ exports.status = async (req, res) => {
     });
 
     const newStatus = req.body.status;
+    const myStatusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get(String(newStatus).toLowerCase());
+    const myStatusId = myStatusRow ? myStatusRow.id : null;
 
     // Update specific assignee status in junction table
-    await db.prepare('INSERT INTO task_assignees(task_id, user_id, status, completed_at) VALUES(?,?,?,CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END) ON DUPLICATE KEY UPDATE status=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END')
-        .run(task.id, req.session.user.id, newStatus, newStatus, newStatus, newStatus);
+    await db.prepare('INSERT INTO task_assignees(task_id, user_id, status, status_id, completed_at) VALUES(?,?,?,?,CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END) ON DUPLICATE KEY UPDATE status=?, status_id=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END')
+        .run(task.id, req.session.user.id, newStatus, myStatusId, newStatus, newStatus, myStatusId, newStatus);
 
     // Calculate overall task completion status for multi-assignees or single assignee
     const assignedUserIds = String(task.assigned_to || '').split(',').map(x => Number(x.trim())).filter(Boolean);
@@ -410,8 +417,12 @@ exports.status = async (req, res) => {
         overallStatus = isAllCompleted ? 'Completed' : 'In Progress';
     }
 
-    await db.prepare("UPDATE tasks SET status=?, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END, updated_by=? WHERE id=?")
-        .run(overallStatus, overallStatus, req.session.user.id, task.id);
+    const overallStatusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get(String(overallStatus).toLowerCase());
+    const overallStatusId = overallStatusRow ? overallStatusRow.id : null;
+
+    await db.prepare("UPDATE tasks SET status=?, status_id=?, completed_at=CASE WHEN ?='Completed' THEN NOW() ELSE NULL END, updated_by=? WHERE id=?")
+        .run(overallStatus, overallStatusId, overallStatus, req.session.user.id, task.id);
+
 
     if (task.is_routine) {
         await routineService.updateRoutineLogStatus(task.id, overallStatus);

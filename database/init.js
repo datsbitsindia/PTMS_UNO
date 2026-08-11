@@ -4,7 +4,8 @@ const config = require('../config');
 let pool;
 
 const prefix = config.tablePrefix || 'uno_';
-const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations', 'project_assignees'];
+const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations', 'project_assignees', 'priorities', 'statuses'];
+
 
 
 
@@ -99,6 +100,51 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
     await addColumn(`${prefix}users`, 'department_id', 'INT NULL');
     await addColumn(`${prefix}users`, 'designation_id', 'INT NULL');
 
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${prefix}priorities (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${prefix}statuses (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, category VARCHAR(50) DEFAULT 'common', active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB`);
+
+    await addColumn(`${prefix}projects`, 'status_id', 'INT NULL');
+    await addColumn(`${prefix}project_assignees`, 'status_id', 'INT NULL');
+    await addColumn(`${prefix}tasks`, 'priority_id', 'INT NULL');
+    await addColumn(`${prefix}tasks`, 'status_id', 'INT NULL');
+    await addColumn(`${prefix}task_assignees`, 'status_id', 'INT NULL');
+    await addColumn(`${prefix}daily_routines`, 'priority_id', 'INT NULL');
+    await addColumn(`${prefix}daily_routine_logs`, 'status_id', 'INT NULL');
+
+    try {
+        const defaultPriorities = [
+            ['Low', 'low'],
+            ['Medium', 'medium'],
+            ['High', 'high'],
+            ['Critical', 'critical']
+        ];
+        for (const [pName, pNorm] of defaultPriorities) {
+            await pool.query(`INSERT IGNORE INTO ${prefix}priorities (name, normalized_name, active) VALUES (?, ?, 1)`, [pName, pNorm]);
+        }
+
+        const defaultStatuses = [
+            ['Pending', 'pending', 'task'],
+            ['In Progress', 'in progress', 'common'],
+            ['Completed', 'completed', 'common'],
+            ['Cancelled', 'cancelled', 'common'],
+            ['Planned', 'planned', 'project'],
+            ['Generated', 'generated', 'routine'],
+            ['Missed', 'missed', 'routine']
+        ];
+        for (const [sName, sNorm, sCat] of defaultStatuses) {
+            await pool.query(`INSERT IGNORE INTO ${prefix}statuses (name, normalized_name, category, active) VALUES (?, ?, ?, 1)`, [sName, sNorm, sCat]);
+        }
+
+        await pool.query(`UPDATE ${prefix}projects p JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(p.status)) SET p.status_id = s.id WHERE p.status_id IS NULL OR p.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}project_assignees pa JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(pa.status)) SET pa.status_id = s.id WHERE pa.status_id IS NULL OR pa.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}priorities pr ON pr.normalized_name = LOWER(TRIM(t.priority)) SET t.priority_id = pr.id WHERE t.priority_id IS NULL OR t.priority_id = 0`);
+        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(t.status)) SET t.status_id = s.id WHERE t.status_id IS NULL OR t.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}task_assignees ta JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(ta.status)) SET ta.status_id = s.id WHERE ta.status_id IS NULL OR ta.status_id = 0`);
+        await pool.query(`UPDATE ${prefix}daily_routines dr JOIN ${prefix}priorities pr ON pr.normalized_name = LOWER(TRIM(dr.priority)) SET dr.priority_id = pr.id WHERE dr.priority_id IS NULL OR dr.priority_id = 0`);
+        await pool.query(`UPDATE ${prefix}daily_routine_logs drl JOIN ${prefix}statuses s ON s.normalized_name = LOWER(TRIM(drl.status)) SET drl.status_id = s.id WHERE drl.status_id IS NULL OR drl.status_id = 0`);
+    } catch(e) {
+        console.error('Priority/Status master table sync error:', e);
+    }
 
     try {
         const [usersToMigrate] = await pool.query(`SELECT id, department, designation, department_id, designation_id FROM ${prefix}users`);
@@ -123,6 +169,7 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
             }
         }
     } catch(e) {}
+
 
 
 
