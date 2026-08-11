@@ -104,12 +104,13 @@ function initMasterAutocomplete() {
         });
     });
 }
-window.addAssigneeChip = function(selectEl, containerId) {
+window.addAssigneeChip = function(selectEl, containerId, inputName) {
     const val = selectEl.value;
     if (!val) return;
     const opt = selectEl.options[selectEl.selectedIndex];
     const name = opt.dataset.name || opt.text;
     const role = opt.dataset.role || '';
+    const fieldName = inputName || 'assigned_to';
 
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -125,12 +126,13 @@ window.addAssigneeChip = function(selectEl, containerId) {
     chip.innerHTML = `
         <i class="fa-solid ${role === 'Manager' ? 'fa-user-tie' : 'fa-user'}"></i>
         <span>${name}</span>
-        <input type="hidden" name="assigned_to" value="${val}">
+        <input type="hidden" name="${fieldName}" value="${val}">
         <span class="chip-remove-btn" onclick="removeAssigneeChip(this)">&times;</span>
     `;
     container.appendChild(chip);
     selectEl.value = '';
 };
+
 
 window.removeAssigneeChip = function(btnEl) {
     const chip = btnEl.closest('.assignee-chip');

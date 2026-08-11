@@ -88,8 +88,9 @@ exports.list = async (req, res) => {
     }
 
     const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY CASE LOWER(COALESCE(ta.status, t.status)) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
-    const employees = u.role === 'manager' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all() : [];
-    const managers = u.role === 'manager' || u.role === 'admin' ? await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
+    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
+    const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
+
     const reportingUsers = await db.prepare("SELECT id,name,role,designation FROM users WHERE role IN ('manager','admin') AND active=1 ORDER BY role, name").all();
     const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') OR name='Self Task' ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
     

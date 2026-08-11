@@ -47,16 +47,17 @@ exports.save = async (req, res) => {
         name,
         description = '',
         start_date,
-        end_date,
-        manager_id
+        end_date
     } = req.body;
 
+    const rawInput = req.body.manager_id || req.body.assigned_to;
     let rawManagerIds = [];
-    if (Array.isArray(manager_id)) {
-        rawManagerIds = manager_id;
-    } else if (manager_id) {
-        rawManagerIds = [manager_id];
+    if (Array.isArray(rawInput)) {
+        rawManagerIds = rawInput;
+    } else if (rawInput) {
+        rawManagerIds = [rawInput];
     }
+
 
     const managerIds = [...new Set(rawManagerIds.map(x => Number(x)).filter(Boolean))];
     if (!name || !managerIds.length) {

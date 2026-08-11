@@ -1,43 +1,57 @@
 <%- include('partials/head',{title:'Profile'}) %>
 <%- include('partials/nav',{page:'profile'}) %>
 
-<% if(error){ %><div class="alert error" style="margin-bottom:10px; padding:8px 12px; font-size:13px;"><%= error %></div><% } %>
-<% if(success){ %><div class="alert success" style="margin-bottom:10px; padding:8px 12px; font-size:13px;"><%= success %></div><% } %>
+<% if(error){ %><div class="alert error" style="margin-bottom:8px; padding:6px 10px; font-size:12px;"><%= error %></div><% } %>
+<% if(success){ %><div class="alert success" style="margin-bottom:8px; padding:6px 10px; font-size:12px;"><%= success %></div><% } %>
 
-<div class="profile-shell" style="gap:12px;">
-    <section class="ui-panel" style="padding:12px 16px; margin:0 0 12px 0;">
-        <div class="ui-panel-head" style="margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
-            <h2 style="font-size:15px; font-weight:700; color:#0f172a; margin:0;"><i class="fa-solid fa-user" style="color:#3b68b7; margin-right:6px;"></i> Profile Details</h2>
+<div class="profile-shell" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start;">
+    <section class="ui-panel" style="padding:10px 14px; margin:0;">
+        <div class="ui-panel-head" style="margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #e2e8f0;">
+            <h2 style="font-size:14px; font-weight:700; color:#0f172a; margin:0;"><i class="fa-solid fa-user" style="color:#3b68b7; margin-right:5px;"></i> Profile Details</h2>
         </div>
-        <form method="post" action="/profile" class="form-grid" style="gap:8px;">
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Name<input name="name" value="<%= profile.name %>" style="height:36px; padding:0 10px; font-size:13px;" required></label>
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Email<input value="<%= profile.email %>" style="height:36px; padding:0 10px; font-size:13px;" disabled></label>
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Phone<input name="phone" value="<%= profile.phone %>" placeholder="Enter phone number" style="height:36px; padding:0 10px; font-size:13px;"></label>
-            <label class="full" style="position:relative; font-size:12px; line-height:1.2; margin-bottom:4px;">
-                Department
-                <input name="department" class="autocomplete-master" data-type="department" value="<%= profile.department %>" placeholder="Search or enter department" style="height:36px; padding:0 10px; font-size:13px;" autocomplete="off">
+        <form method="post" action="/profile" style="display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; align-items:start;">
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Name
+                <input name="name" value="<%= profile.name %>" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" required>
             </label>
-            <label class="full" style="position:relative; font-size:12px; line-height:1.2; margin-bottom:4px;">
-                Designation
-                <input name="designation" class="autocomplete-master" data-type="designation" value="<%= profile.designation %>" placeholder="Search or enter designation" style="height:36px; padding:0 10px; font-size:13px;" autocomplete="off">
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Email
+                <input value="<%= profile.email %>" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" disabled>
             </label>
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Role<input value="<%= user.role %>" style="height:36px; padding:0 10px; font-size:13px;" disabled></label>
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Phone
+                <input name="phone" value="<%= profile.phone %>" placeholder="Enter phone" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;">
+            </label>
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Role
+                <input value="<%= user.role %>" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" disabled>
+            </label>
+            <label style="grid-column: span 2; position:relative; font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Department
+                <input name="department" class="autocomplete-master" data-type="department" value="<%= profile.department %>" placeholder="Search or enter department" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" autocomplete="off">
+            </label>
+            <label style="grid-column: span 2; position:relative; font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Designation
+                <input name="designation" class="autocomplete-master" data-type="designation" value="<%= profile.designation %>" placeholder="Search or enter designation" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" autocomplete="off">
+            </label>
 
-            <div class="full actions" style="margin-top:6px;">
-                <button class="btn primary" style="height:36px; padding:0 16px; font-size:13px;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+            <div style="grid-column: span 2; margin-top:4px;">
+                <button class="btn primary" style="height:32px; padding:0 14px; font-size:12px;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
             </div>
         </form>
     </section>
 
-    <section class="ui-panel" style="padding:12px 16px; margin:0;">
-        <div class="ui-panel-head" style="margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
-            <h2 style="font-size:15px; font-weight:700; color:#0f172a; margin:0;"><i class="fa-solid fa-lock" style="color:#6366f1; margin-right:6px;"></i> Change Password</h2>
+    <section class="ui-panel" style="padding:10px 14px; margin:0;">
+        <div class="ui-panel-head" style="margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #e2e8f0;">
+            <h2 style="font-size:14px; font-weight:700; color:#0f172a; margin:0;"><i class="fa-solid fa-lock" style="color:#6366f1; margin-right:5px;"></i> Change Password</h2>
         </div>
-        <form method="post" action="/profile/password" class="stack" style="gap:8px;">
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Current Password<input type="password" name="currentPassword" style="height:36px; padding:0 10px; font-size:13px;" required></label>
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">New Password<input type="password" name="newPassword" minlength="8" style="height:36px; padding:0 10px; font-size:13px;" required></label>
-            <label style="font-size:12px; line-height:1.2; margin-bottom:4px;">Confirm New Password<input type="password" name="confirmPassword" minlength="8" style="height:36px; padding:0 10px; font-size:13px;" required></label>
-            <button class="btn primary" style="height:36px; padding:0 16px; font-size:13px; margin-top:4px;"><i class="fa-solid fa-lock"></i> Change Password</button>
+        <form method="post" action="/profile/password" style="display:flex; flex-direction:column; gap:8px;">
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Current Password
+                <input type="password" name="currentPassword" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" required>
+            </label>
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">New Password
+                <input type="password" name="newPassword" minlength="8" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" required>
+            </label>
+            <label style="font-size:11px; font-weight:600; color:#475569; margin:0; line-height:1.1;">Confirm New Password
+                <input type="password" name="confirmPassword" minlength="8" style="height:32px; padding:0 8px; font-size:12px; margin-top:2px;" required>
+            </label>
+            <div style="margin-top:4px;">
+                <button class="btn primary" style="height:32px; padding:0 14px; font-size:12px;"><i class="fa-solid fa-lock"></i> Change Password</button>
+            </div>
         </form>
     </section>
 </div>
