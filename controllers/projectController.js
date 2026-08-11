@@ -174,6 +174,7 @@ exports.detail = async (req, res) => {
 };
 
 exports.addUpdate = async (req, res) => {
+  try {
     const u = req.session.user;
     const project = await db.prepare('SELECT * FROM projects WHERE id=?').get(req.params.id);
 
@@ -194,9 +195,11 @@ exports.addUpdate = async (req, res) => {
     const newStatus = progress >= 100 ? 'Completed' : progress > 0 ? 'In Progress' : 'Planned';
 
     if (managerIds.length > 1) {
-        await db.prepare('INSERT INTO project_assignees(project_id, user_id, status) VALUES(?,?,?) ON DUPLICATE KEY UPDATE status=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END').run(
-            project.id, u.id, newStatus, newStatus, newStatus
-        );
+        try {
+            await db.prepare('INSERT INTO project_assignees(project_id, user_id, status) VALUES(?,?,?) ON DUPLICATE KEY UPDATE status=?, completed_at=CASE WHEN ?=\'Completed\' THEN NOW() ELSE NULL END').run(
+                project.id, u.id, newStatus, newStatus, newStatus
+            );
+        } catch(e) { console.error('project_assignees upsert error:', e.message); }
 
         const stats = await db.prepare('SELECT COUNT(*) total, SUM(CASE WHEN status=\'Completed\' THEN 1 ELSE 0 END) completed FROM project_assignees WHERE project_id=?').get(project.id);
         const allCompleted = stats && Number(stats.total) > 0 && Number(stats.total) === Number(stats.completed);
@@ -211,8 +214,12 @@ exports.addUpdate = async (req, res) => {
         );
     }
 
+    try { await activity.log(u.id, 'Project Daily Update', project.name); } catch(e) {}
+    try { await notifications.notify(project.created_by, `${u.name} added an update to ${project.name}`, `/projects/${project.id}`); } catch(e) {}
 
-    await activity.log(u.id, 'Project Daily Update', project.name);
-    await notifications.notify(project.created_by, `${u.name} added an update to ${project.name}`, `/projects/${project.id}`);
     res.redirect(`/projects/${project.id}?success=update`);
+  } catch(err) {
+    console.error('addUpdate error:', err);
+    res.status(500).render('error', { message: 'Failed to send update: ' + err.message });
+  }
 };

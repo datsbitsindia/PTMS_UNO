@@ -254,14 +254,20 @@ exports.save = async (req, res) => {
         const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
 
         let updPriorityId = 1;
+        let updPriorityName = 'Medium';
         try {
             const pVal = String(priority || '').toLowerCase().trim();
-            const pRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
-            if (pRow && pRow.id !== undefined) updPriorityId = Number(pRow.id);
-        } catch(e) {}
+            const pRow = await db.prepare('SELECT id, name FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
+            if (pRow && pRow.id !== undefined) {
+                updPriorityId = Number(pRow.id);
+                updPriorityName = pRow.name || priority;
+            } else {
+                updPriorityName = priority; // keep original text if not found in master
+            }
+        } catch(e) { updPriorityName = priority; }
 
         await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,priority_id=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
-            pid, title, description, updPriorityId, updPriorityId, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
+            pid, title, description, updPriorityName, updPriorityId, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
         );
 
         for (const targetAssignee of assignees) {
@@ -297,20 +303,30 @@ exports.save = async (req, res) => {
         const isSelfTask = assignees.length === 1 && Number(assignees[0]) === Number(req.session.user.id) ? 1 : 0;
         
         let priorityId = 1; // Default Medium (1)
+        let priorityName = 'Medium';
         try {
             const pVal = String(priority || '').toLowerCase().trim();
-            const priorityRow = await db.prepare('SELECT id FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
-            if (priorityRow && priorityRow.id !== undefined) priorityId = Number(priorityRow.id);
-        } catch(e) {}
+            const priorityRow = await db.prepare('SELECT id, name FROM priorities WHERE normalized_name=? OR id=?').get(pVal, Number(pVal) || -1);
+            if (priorityRow && priorityRow.id !== undefined) {
+                priorityId = Number(priorityRow.id);
+                priorityName = priorityRow.name || priority;
+            } else {
+                priorityName = priority;
+            }
+        } catch(e) { priorityName = priority; }
 
         let statusId = 0; // Default Pending (0)
+        let statusName = 'Pending';
         try {
-            const statusRow = await db.prepare("SELECT id FROM statuses WHERE normalized_name='pending' OR id=0").get();
-            if (statusRow && statusRow.id !== undefined) statusId = Number(statusRow.id);
+            const statusRow = await db.prepare("SELECT id, name FROM statuses WHERE normalized_name='pending' OR id=0").get();
+            if (statusRow && statusRow.id !== undefined) {
+                statusId = Number(statusRow.id);
+                statusName = statusRow.name || 'Pending';
+            }
         } catch(e) {}
 
         const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priorityId, priorityId, statusId, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
+            pid, title, description, priorityName, priorityId, statusName, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
