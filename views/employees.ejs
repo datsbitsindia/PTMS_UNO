@@ -39,25 +39,26 @@
     </div>
 </div>
 
-<div class="toolbar-ui compact-filter" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
-        <input type="search" placeholder="Search team members..." style="max-width:240px;">
-        <% if (currentUserRole === 'admin') { %>
-            <select style="max-width:160px;">
-                <option value="">All Roles</option>
-                <option value="Manager">Manager</option>
-                <option value="Employee">Employee</option>
-            </select>
-        <% } %>
-        <select style="max-width:180px;">
-            <option value="">All Departments</option>
-            <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
-                <option><%= x %></option>
-            <% }) %>
+<div class="toolbar-ui compact-filter" style="display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; flex-wrap:wrap; background:#fff; padding:12px 14px; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+    <input type="search" placeholder="Search team members..." style="flex:1 1 200px !important; min-width:140px !important; width:auto !important; height:38px !important; border-radius:10px !important; font-size:13px !important;">
+    <% if (currentUserRole === 'admin') { %>
+        <select style="flex:0 0 auto !important; min-width:120px !important; width:auto !important; max-width:160px !important; height:38px !important; border-radius:10px !important; font-size:13px !important;">
+            <option value="">All Roles</option>
+            <option value="Manager">Manager</option>
+            <option value="Employee">Employee</option>
         </select>
-        <button type="button" class="filter-confirm"><i class="fa-solid fa-check"></i> Confirm</button>
-    </div>
+    <% } %>
+    <select style="flex:0 0 auto !important; min-width:140px !important; width:auto !important; max-width:180px !important; height:38px !important; border-radius:10px !important; font-size:13px !important;">
+        <option value="">All Departments</option>
+        <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
+            <option><%= x %></option>
+        <% }) %>
+    </select>
+    <button type="button" class="filter-confirm" style="flex:0 0 auto !important; height:38px !important; padding:0 16px !important; border-radius:10px !important; font-size:13px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:6px !important;">
+        <i class="fa-solid fa-check"></i> Confirm
+    </button>
 </div>
+
 
 
 <section class="ui-panel" style="margin-top:16px;">
