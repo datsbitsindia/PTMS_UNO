@@ -172,12 +172,13 @@
 
     <div class="task-type-tabs-container" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 12px !important;">
         <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="height: 36px !important; padding: 0 6px !important; font-size: 13px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important;">
-            <i class="fa-solid fa-inbox"></i> To Do (<%= assignedToMeTasks.length %>)
+            <i class="fa-solid fa-inbox"></i> To Do
         </button>
         <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="height: 36px !important; padding: 0 6px !important; font-size: 13px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; background: #fefce8 !important; color: #a16207 !important; border: 1px solid #fef08a !important;">
-            <i class="fa-solid fa-paper-plane"></i> Assigned (<%= assignedByMeTasks.length %>)
+            <i class="fa-solid fa-paper-plane"></i> Assigned
         </button>
     </div>
+
 
 
     <div class="toolbar-ui compact-filter" style="margin-bottom: 16px;">
