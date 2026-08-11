@@ -50,12 +50,13 @@ exports.list = async (req, res) => {
     let params = [u.id];
 
     if (u.role === 'employee') {
-        baseFilter = '(FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-        params.push(u.id, u.id, u.id, u.id);
+        baseFilter = '(t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        params.push(u.id, u.id, u.id, u.id, u.id);
     } else if (u.role === 'manager') {
-        baseFilter = '(p.manager_id=? OR t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        baseFilter = '(FIND_IN_SET(?, p.manager_id) > 0 OR t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
         params.push(u.id, u.id, u.id, u.id, u.id, u.id);
     }
+
 
     const filters = [baseFilter];
 
