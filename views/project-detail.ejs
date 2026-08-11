@@ -52,7 +52,36 @@
     </div>
 </div>
 
-<section class="panel">
+<% if (projectAssignees && projectAssignees.length > 1) { %>
+<section class="panel" style="margin-top:10px">
+    <h2>Assigned Managers</h2>
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;">
+        <% projectAssignees.forEach(pa => {
+            const paStatus = (function(s) {
+                const sv = String(s||'').trim();
+                if(sv==='0'||sv==='pending') return 'Pending';
+                if(sv==='1'||sv==='in progress') return 'In Progress';
+                if(sv==='2'||sv==='completed') return 'Completed';
+                if(sv==='3'||sv==='cancelled') return 'Cancelled';
+                if(sv==='4'||sv==='planned') return 'Planned';
+                return sv || 'Pending';
+            })(pa.status_id ?? pa.status);
+        %>
+        <div style="display:flex; align-items:center; gap:8px; background:#f1f5f9; border-radius:10px; padding:8px 14px;">
+            <div class="avatar" style="width:32px;height:32px;font-size:13px;flex-shrink:0;"><%= pa.name.charAt(0) %></div>
+            <div>
+                <div style="font-weight:700; font-size:13px; color:#0f172a;"><%= pa.name %></div>
+                <span class="status-chip <%= String(paStatus).toLowerCase().replaceAll(' ','-') %>" style="font-size:10px; padding:2px 8px;">
+                    <%= paStatus %>
+                </span>
+            </div>
+        </div>
+        <% }) %>
+    </div>
+</section>
+<% } %>
+
+<section class="panel" style="margin-top:10px">
     <h2>Project details</h2>
     <div class="description-content ck-content"><%- project.description || 'No detailed description provided.' %></div>
 </section>
