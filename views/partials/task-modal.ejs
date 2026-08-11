@@ -1,11 +1,12 @@
-<% if (user && user.role !== 'admin' && typeof projects !== 'undefined') { %>
+<% if (user && typeof projects !== 'undefined') { %>
 
     <div class="modal" id="task-modal">
 
         <div class="modal-card">
 
             <!-- Modal Header Tabs -->
-            <% if (user.role === 'manager') { %>
+            <% if (user.role === 'manager' || user.role === 'admin') { %>
+
             <div class="modal-header-tabs">
                 <div class="modal-tabs">
                     <button type="button" class="modal-tab active" data-tab="single-task-tab">

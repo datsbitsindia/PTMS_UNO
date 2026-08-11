@@ -66,11 +66,12 @@
         </div>
 
         <div class="topbar-right-group" style="display:flex; align-items:center; gap:8px; margin-left:auto;">
-            <% if (page === 'tasks' && user.role !== 'admin') { %>
+            <% if (page === 'tasks') { %>
                 <button class="btn primary btn-sm" data-open="task-modal" style="white-space:nowrap;">
                     <i class="fa-solid fa-plus"></i> Add Task
                 </button>
             <% } %>
+
 
             <% if (page === 'employees') { %>
                 <button class="btn primary btn-sm" data-open="employee-modal" style="white-space:nowrap;">
