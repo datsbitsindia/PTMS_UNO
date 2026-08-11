@@ -171,14 +171,14 @@
 <section class="ui-panel">
 
     <div class="task-type-tabs-container" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; width: 100% !important; gap: 6px !important; margin-bottom: 12px !important;">
-        <button type="button" class="btn task-tab-btn active" data-task-tab="all" onclick="filterTaskType('all', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important;">
+        <button type="button" class="btn task-tab-btn active" data-task-tab="all" onclick="filterTaskType('all', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important;">
             <i class="fa-solid fa-list-check"></i> All Tasks (<%= tasks.length %>)
         </button>
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important;">
-            <i class="fa-solid fa-inbox"></i> My Tasks / To Do (<%= assignedToMeTasks.length %>)
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important;">
+            <i class="fa-solid fa-inbox"></i> To Do (<%= assignedToMeTasks.length %>)
         </button>
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 11.5px !important; font-weight: 700 !important; white-space: nowrap !important; text-overflow: ellipsis !important; overflow: hidden !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #fefce8 !important; color: #a16207 !important; border: 1px solid #fef08a !important;">
-            <i class="fa-solid fa-paper-plane"></i> Assigned by Me (<%= assignedByMeTasks.length %>)
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="flex: 1 1 0% !important; min-width: 0 !important; height: 34px !important; padding: 0 4px !important; font-size: 12px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; background: #fefce8 !important; color: #a16207 !important; border: 1px solid #fef08a !important;">
+            <i class="fa-solid fa-paper-plane"></i> By Me (<%= assignedByMeTasks.length %>)
         </button>
     </div>
 
@@ -244,17 +244,18 @@
 
                         <% if (isAssignedByMe) { %>
                             <span class="status-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-                                <i class="fa-solid fa-paper-plane"></i> Assigned by You to <%= t.assigned_name %>
+                                <i class="fa-solid fa-paper-plane"></i> By Me
                             </span>
                         <% } else if (isAssignedToMe && !isPureSelf) { %>
                             <span class="status-chip" style="background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-                                <i class="fa-solid fa-inbox"></i> Assigned to You by <%= t.creator_name %>
+                                <i class="fa-solid fa-inbox"></i> To Do
                             </span>
                         <% } else if (isPureSelf) { %>
                             <span class="status-chip self-task" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
                                 <i class="fa-solid fa-user-check"></i> Self Task
                             </span>
                         <% } %>
+
 
                         <span class="priority-pill <%= t.priority.toLowerCase() %>" style="font-weight:700; font-size:10px; padding:3px 8px; border-radius:99px;">
                             <i class="fa-solid fa-flag"></i> <%= t.priority %>
