@@ -419,6 +419,15 @@ exports.status = async (req, res) => {
 
     await activity.log(req.session.user.id, newStatus === 'Completed' ? 'Task Completed' : 'Task Updated', task.title);
     await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`);
+
+    if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.json({
+            success: true,
+            overallStatus: overallStatus,
+            myStatus: newStatus
+        });
+    }
+
     res.redirect(`/tasks/${task.id}?success=status`);
 };
 
@@ -428,11 +437,26 @@ exports.comment = async (req, res) => {
     if (!task || !(await canView(req.session.user, task)) || !message) return res.status(403).render('error', {
         message: 'Not allowed'
     });
-    await db.prepare('INSERT INTO comments(task_id,user_id,message) VALUES(?,?,?)').run(task.id, req.session.user.id, message);
+    const result = await db.prepare('INSERT INTO comments(task_id,user_id,message) VALUES(?,?,?)').run(task.id, req.session.user.id, message);
     await activity.log(req.session.user.id, 'Comment Added', task.title);
     await notifications.notify(req.session.user.id === task.assigned_to ? task.created_by : task.assigned_to, `New comment on: ${task.title}`, `/tasks/${task.id}`);
+
+    if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+        return res.json({
+            success: true,
+            comment: {
+                id: result.lastInsertRowid,
+                user_id: req.session.user.id,
+                name: req.session.user.name,
+                message: message,
+                created_at: new Date()
+            }
+        });
+    }
+
     res.redirect(`/tasks/${task.id}?success=comment`);
 };
+
 
 exports.upload = async (req, res) => {
     const task = await db.prepare('SELECT * FROM tasks WHERE id=?').get(req.params.id);

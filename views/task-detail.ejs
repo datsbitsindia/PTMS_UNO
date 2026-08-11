@@ -280,7 +280,110 @@
 window.addEventListener('DOMContentLoaded', () => {
     const box = document.getElementById('chat-messages-box');
     if(box) box.scrollTop = box.scrollHeight;
+
+    const statusForm = document.querySelector('.status-update-form');
+    if (statusForm) {
+        statusForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = statusForm.querySelector('button');
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+
+            try {
+                const formData = new FormData(statusForm);
+                const res = await fetch(statusForm.action, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    const overallChip = document.querySelector('.task-info-grid .status-chip');
+                    if (overallChip) {
+                        overallChip.textContent = data.overallStatus;
+                        overallChip.className = 'status-chip ' + data.overallStatus.toLowerCase().replaceAll(' ', '-');
+                    }
+
+                    let toast = document.querySelector('.success-toast');
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.className = 'success-toast';
+                        document.body.prepend(toast);
+                    }
+                    toast.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span><b>Update successful</b><small>Task status has been updated.</small></span>';
+                    toast.style.display = 'flex';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                } else {
+                    statusForm.submit();
+                }
+            } catch (err) {
+                console.error(err);
+                statusForm.submit();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+            }
+        });
+    }
+
+    const chatForm = document.querySelector('.chat-input-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const textarea = chatForm.querySelector('textarea');
+            const msg = textarea.value.trim();
+            if (!msg) return;
+
+            const btn = chatForm.querySelector('.send-btn');
+            btn.disabled = true;
+
+            try {
+                const formData = new FormData(chatForm);
+                const res = await fetch(chatForm.action, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+
+                const data = await res.json();
+                if (data.success && data.comment) {
+                    textarea.value = '';
+                    const box = document.getElementById('chat-messages-box');
+                    const emptyNote = box.querySelector('.empty-chat');
+                    if (emptyNote) emptyNote.remove();
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'chat-bubble outgoing';
+                    bubble.innerHTML = `
+                        <p class="message-text">${data.comment.message}</p>
+                        <div class="message-meta">
+                            <time>Just now</time>
+                            <i class="fa-solid fa-check-double read-receipt"></i>
+                        </div>
+                    `;
+                    box.appendChild(bubble);
+                    box.scrollTop = box.scrollHeight;
+                } else {
+                    chatForm.submit();
+                }
+            } catch (err) {
+                console.error(err);
+                chatForm.submit();
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
 });
 </script>
 <%- include('partials/task-modal') %>
 <%- include('partials/foot') %>
+
