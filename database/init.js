@@ -97,69 +97,89 @@ CREATE TABLE IF NOT EXISTS ${prefix}project_assignees (id INT AUTO_INCREMENT PRI
     } catch(e) {}
 
 
-    await addColumn(`${prefix}users`, 'department_id', 'INT NULL');
-    await addColumn(`${prefix}users`, 'designation_id', 'INT NULL');
+    await pool.query(`DROP TABLE IF EXISTS ${prefix}priorities`);
+    await pool.query(`DROP TABLE IF EXISTS ${prefix}statuses`);
+    await pool.query(`CREATE TABLE ${prefix}priorities (id INT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, active BOOLEAN DEFAULT TRUE) ENGINE=InnoDB`);
+    await pool.query(`CREATE TABLE ${prefix}statuses (id INT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, category VARCHAR(50) DEFAULT 'common', active BOOLEAN DEFAULT TRUE) ENGINE=InnoDB`);
 
-    await pool.query(`CREATE TABLE IF NOT EXISTS ${prefix}priorities (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS ${prefix}statuses (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, normalized_name VARCHAR(100) UNIQUE NOT NULL, category VARCHAR(50) DEFAULT 'common', active BOOLEAN DEFAULT TRUE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB`);
 
-    await addColumn(`${prefix}projects`, 'status_id', 'INT NULL');
-    await addColumn(`${prefix}project_assignees`, 'status_id', 'INT NULL');
-    await addColumn(`${prefix}tasks`, 'priority_id', 'INT NULL');
-    await addColumn(`${prefix}tasks`, 'status_id', 'INT NULL');
-    await addColumn(`${prefix}task_assignees`, 'status_id', 'INT NULL');
-    await addColumn(`${prefix}daily_routines`, 'priority_id', 'INT NULL');
-    await addColumn(`${prefix}daily_routine_logs`, 'status_id', 'INT NULL');
+    await addColumn(`${prefix}projects`, 'status_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}project_assignees`, 'status_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}tasks`, 'priority_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}tasks`, 'status_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}task_assignees`, 'status_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}daily_routines`, 'priority_id', 'INT DEFAULT 0');
+    await addColumn(`${prefix}daily_routine_logs`, 'status_id', 'INT DEFAULT 0');
 
     try {
         const defaultPriorities = [
-            ['Low', 'low'],
-            ['Medium', 'medium'],
-            ['High', 'high'],
-            ['Critical', 'critical']
+            [0, 'Low', 'low'],
+            [1, 'Medium', 'medium'],
+            [2, 'High', 'high'],
+            [3, 'Critical', 'critical']
         ];
-        for (const [pName, pNorm] of defaultPriorities) {
-            await pool.query(`INSERT IGNORE INTO ${prefix}priorities (name, normalized_name, active) VALUES (?, ?, 1)`, [pName, pNorm]);
+        for (const [pId, pName, pNorm] of defaultPriorities) {
+            await pool.query(`INSERT INTO ${prefix}priorities (id, name, normalized_name, active) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE name=VALUES(name)`, [pId, pName, pNorm]);
         }
 
         const defaultStatuses = [
-            ['Pending', 'pending', 'task'],
-            ['In Progress', 'in progress', 'common'],
-            ['Completed', 'completed', 'common'],
-            ['Cancelled', 'cancelled', 'common'],
-            ['Planned', 'planned', 'project'],
-            ['Generated', 'generated', 'routine'],
-            ['Missed', 'missed', 'routine']
+            [0, 'Pending', 'pending', 'task'],
+            [1, 'In Progress', 'in progress', 'common'],
+            [2, 'Completed', 'completed', 'common'],
+            [3, 'Cancelled', 'cancelled', 'common'],
+            [4, 'Planned', 'planned', 'project'],
+            [5, 'Generated', 'generated', 'routine'],
+            [6, 'Missed', 'missed', 'routine']
         ];
-        for (const [sName, sNorm, sCat] of defaultStatuses) {
-            await pool.query(`INSERT IGNORE INTO ${prefix}statuses (name, normalized_name, category, active) VALUES (?, ?, ?, 1)`, [sName, sNorm, sCat]);
+        for (const [sId, sName, sNorm, sCat] of defaultStatuses) {
+            await pool.query(`INSERT INTO ${prefix}statuses (id, name, normalized_name, category, active) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE name=VALUES(name)`, [sId, sName, sNorm, sCat]);
         }
 
-        await pool.query(`UPDATE ${prefix}projects p JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(p.status)) OR s.id = p.status_id) SET p.status_id = s.id WHERE p.status_id IS NULL OR p.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}project_assignees pa JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(pa.status)) OR s.id = pa.status_id) SET pa.status_id = s.id WHERE pa.status_id IS NULL OR pa.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}priorities pr ON (pr.normalized_name = LOWER(TRIM(t.priority)) OR pr.id = t.priority_id) SET t.priority_id = pr.id WHERE t.priority_id IS NULL OR t.priority_id = 0`);
-        await pool.query(`UPDATE ${prefix}tasks t JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(t.status)) OR s.id = t.status_id) SET t.status_id = s.id WHERE t.status_id IS NULL OR t.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}task_assignees ta JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(ta.status)) OR s.id = ta.status_id) SET ta.status_id = s.id WHERE ta.status_id IS NULL OR ta.status_id = 0`);
-        await pool.query(`UPDATE ${prefix}daily_routines dr JOIN ${prefix}priorities pr ON (pr.normalized_name = LOWER(TRIM(dr.priority)) OR pr.id = dr.priority_id) SET dr.priority_id = pr.id WHERE dr.priority_id IS NULL OR dr.priority_id = 0`);
-        await pool.query(`UPDATE ${prefix}daily_routine_logs drl JOIN ${prefix}statuses s ON (s.normalized_name = LOWER(TRIM(drl.status)) OR s.id = drl.status_id) SET drl.status_id = s.id WHERE drl.status_id IS NULL OR drl.status_id = 0`);
+        const tablesToFix = [
+            { table: prefix + 'tasks', priorityCol: 'priority', statusCol: 'status' },
+            { table: prefix + 'projects', statusCol: 'status' },
+            { table: prefix + 'task_assignees', statusCol: 'status' },
+            { table: prefix + 'project_assignees', statusCol: 'status' },
+            { table: prefix + 'daily_routines', priorityCol: 'priority' },
+            { table: prefix + 'daily_routine_logs', statusCol: 'status' }
+        ];
 
-        await pool.query(`ALTER TABLE ${prefix}projects MODIFY status INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}project_assignees MODIFY status INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}tasks MODIFY priority INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}tasks MODIFY status INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}task_assignees MODIFY status INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}daily_routines MODIFY priority INT NULL`);
-        await pool.query(`ALTER TABLE ${prefix}daily_routine_logs MODIFY status INT NULL`);
+        for (const t of tablesToFix) {
+            try {
+                const [cols] = await pool.query(`SHOW COLUMNS FROM ${t.table}`);
+                const colTypes = {};
+                cols.forEach(c => colTypes[c.Field] = c.Type.toLowerCase());
 
-        await pool.query(`UPDATE ${prefix}projects SET status = status_id WHERE status IS NULL OR status != status_id`);
-        await pool.query(`UPDATE ${prefix}project_assignees SET status = status_id WHERE status IS NULL OR status != status_id`);
-        await pool.query(`UPDATE ${prefix}tasks SET priority = priority_id, status = status_id WHERE priority IS NULL OR priority != priority_id OR status IS NULL OR status != status_id`);
-        await pool.query(`UPDATE ${prefix}task_assignees SET status = status_id WHERE status IS NULL OR status != status_id`);
-        await pool.query(`UPDATE ${prefix}daily_routines SET priority = priority_id WHERE priority IS NULL OR priority != priority_id`);
-        await pool.query(`UPDATE ${prefix}daily_routine_logs SET status = status_id WHERE status IS NULL OR status != status_id`);
+                if (t.priorityCol && colTypes[t.priorityCol] && !colTypes[t.priorityCol].includes('int')) {
+                    await pool.query(`ALTER TABLE ${t.table} ADD COLUMN priority_num INT DEFAULT 0`);
+                    await pool.query(`UPDATE ${t.table} SET priority_num = CASE LOWER(TRIM(priority)) WHEN 'low' THEN 0 WHEN '1' THEN 0 WHEN 'medium' THEN 1 WHEN '2' THEN 1 WHEN 'high' THEN 2 WHEN '3' THEN 2 WHEN 'critical' THEN 3 WHEN '4' THEN 3 ELSE 0 END`);
+                    await pool.query(`ALTER TABLE ${t.table} DROP COLUMN priority`);
+                    await pool.query(`ALTER TABLE ${t.table} CHANGE COLUMN priority_num priority INT DEFAULT 0`);
+                } else if (t.priorityCol && colTypes[t.priorityCol]) {
+                    await pool.query(`UPDATE ${t.table} SET priority = CASE WHEN priority >= 1 AND priority <= 4 THEN priority - 1 ELSE priority END WHERE priority > 3`);
+                }
+
+                if (t.statusCol && colTypes[t.statusCol] && !colTypes[t.statusCol].includes('int')) {
+                    await pool.query(`ALTER TABLE ${t.table} ADD COLUMN status_num INT DEFAULT 0`);
+                    await pool.query(`UPDATE ${t.table} SET status_num = CASE LOWER(TRIM(status)) WHEN 'pending' THEN 0 WHEN '1' THEN 0 WHEN 'in progress' THEN 1 WHEN '2' THEN 1 WHEN 'completed' THEN 2 WHEN '3' THEN 2 WHEN 'cancelled' THEN 3 WHEN '4' THEN 3 WHEN 'planned' THEN 4 WHEN '5' THEN 4 WHEN 'generated' THEN 5 WHEN '6' THEN 5 WHEN 'missed' THEN 6 WHEN '7' THEN 6 ELSE 0 END`);
+                    await pool.query(`ALTER TABLE ${t.table} DROP COLUMN status`);
+                    await pool.query(`ALTER TABLE ${t.table} CHANGE COLUMN status_num status INT DEFAULT 0`);
+                }
+            } catch(err) {
+                console.error(`Migration note for ${t.table}:`, err.message);
+            }
+        }
+
+        await pool.query(`UPDATE ${prefix}projects SET status_id = status`);
+        await pool.query(`UPDATE ${prefix}project_assignees SET status_id = status`);
+        await pool.query(`UPDATE ${prefix}tasks SET priority_id = priority, status_id = status`);
+        await pool.query(`UPDATE ${prefix}task_assignees SET status_id = status`);
+        await pool.query(`UPDATE ${prefix}daily_routines SET priority_id = priority`);
+        await pool.query(`UPDATE ${prefix}daily_routine_logs SET status_id = status`);
     } catch(e) {
         console.error('Priority/Status master table sync error:', e);
     }
+
 
 
     try {

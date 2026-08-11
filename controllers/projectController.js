@@ -89,17 +89,18 @@ exports.save = async (req, res) => {
         res.redirect(`/projects/${id}`);
     } else {
         const statusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get('planned');
-        const statusId = statusRow ? statusRow.id : 5;
+        const statusId = (statusRow && statusRow.id !== undefined) ? statusRow.id : 4;
         const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,created_by,manager_id,status,status_id) VALUES(?,?,?,?,?,?,?,?)').run(
-            name, description, start_date || null, end_date || null, req.session.user.id, managerIdStr, 'Planned', statusId
+            name, description, start_date || null, end_date || null, req.session.user.id, managerIdStr, statusId, statusId
         );
         const projectId = result.lastInsertRowid;
 
         if (managerIds.length > 1) {
             for (const mId of managerIds) {
-                await db.prepare('INSERT IGNORE INTO project_assignees(project_id, user_id, status, status_id) VALUES(?,?,?,?)').run(projectId, mId, 'Pending', 1);
+                await db.prepare('INSERT IGNORE INTO project_assignees(project_id, user_id, status, status_id) VALUES(?,?,?,?)').run(projectId, mId, 0, 0);
             }
         }
+
 
 
         await activity.log(req.session.user.id, 'Project Assigned', name);
