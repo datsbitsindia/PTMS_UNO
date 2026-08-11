@@ -216,6 +216,7 @@ exports.forward = async (req, res) => {
 };
 
 exports.save = async (req, res) => {
+  try {
     const {
         id,
         title,
@@ -301,7 +302,7 @@ exports.save = async (req, res) => {
         } catch(e) {}
 
         const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priorityId, priorityId, statusId, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
+            pid, title, description, priority, priorityId, 'Pending', statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
         );
         const taskId = result.lastInsertRowid;
 
@@ -327,6 +328,10 @@ exports.save = async (req, res) => {
 
         return res.redirect(`/tasks/${taskId}`);
     }
+  } catch(saveErr) {
+    console.error('Task save error:', saveErr);
+    return res.status(500).render('error', { message: 'Failed to save task: ' + saveErr.message });
+  }
 };
 
 
