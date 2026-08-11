@@ -155,7 +155,32 @@
     </div>
 <% } %>
 
+<%
+    const myId = user.id;
+    const assignedToMeTasks = tasks.filter(t => {
+        const ids = String(t.assigned_to || '').split(',').map(x => Number(x.trim()));
+        return ids.includes(myId);
+    });
+
+    const assignedByMeTasks = tasks.filter(t => {
+        const ids = String(t.assigned_to || '').split(',').map(x => Number(x.trim()));
+        return Number(t.created_by) === myId && !ids.every(id => id === myId);
+    });
+%>
+
 <section class="ui-panel">
+
+    <div class="task-type-tabs-container" style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn task-tab-btn active" data-task-tab="all" onclick="filterTaskType('all', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600;">
+            <i class="fa-solid fa-list-check"></i> All Tasks (<%= tasks.length %>)
+        </button>
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; opacity: 0.85;">
+            <i class="fa-solid fa-inbox"></i> 📥 My Tasks / To Do (<%= assignedToMeTasks.length %>)
+        </button>
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="padding: 6px 14px; font-size: 13px; font-weight: 600; background: #fefce8; color: #a16207; border: 1px solid #fef08a; opacity: 0.85;">
+            <i class="fa-solid fa-paper-plane"></i> 📤 Assigned by Me (<%= assignedByMeTasks.length %>)
+        </button>
+    </div>
 
     <div class="toolbar-ui compact-filter" style="margin-bottom: 16px;">
         <input
@@ -188,6 +213,13 @@
     <div class="entity-list">
 
         <% tasks.forEach(t => { %>
+            <%
+                const assignedIds = String(t.assigned_to || '').split(',').map(x => Number(x.trim()));
+                const isPureSelf = t.is_self_task || String(t.project_name).toLowerCase() === 'self task' || (Number(t.created_by) === user.id && assignedIds.length === 1 && assignedIds[0] === user.id);
+                const isAssignedByMe = Number(t.created_by) === user.id && !isPureSelf;
+                const isAssignedToMe = assignedIds.includes(user.id);
+                const filterGroup = isPureSelf ? 'self' : isAssignedByMe ? 'assigned-by-me' : 'assigned-to-me';
+            %>
 
             <article
                 class="entity-card task-card <%= t.is_overdue ? 'overdue-card' : '' %> <%= t.is_routine ? 'routine-task-card' : '' %>"
@@ -195,6 +227,7 @@
                 data-overdue="<%= t.is_overdue ? 'true' : 'false' %>"
                 data-forwarded="<%= t.is_forwarded ? 'true' : 'false' %>"
                 data-project="<%= (t.project_name || '').toLowerCase() %>"
+                data-filter-group="<%= filterGroup %>"
             >
 
                 <div class="entity-title">
@@ -209,7 +242,15 @@
                             <span class="routine-badge"><i class="fa-solid fa-repeat"></i> Daily Routine</span>
                         <% } %>
 
-                        <% if (t.is_self_task || String(t.project_name).toLowerCase() === 'self task' || Number(t.created_by) === Number(t.assigned_to)) { %>
+                        <% if (isAssignedByMe) { %>
+                            <span class="status-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+                                <i class="fa-solid fa-paper-plane"></i> Assigned by You to <%= t.assigned_name %>
+                            </span>
+                        <% } else if (isAssignedToMe && !isPureSelf) { %>
+                            <span class="status-chip" style="background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+                                <i class="fa-solid fa-inbox"></i> Assigned to You by <%= t.creator_name %>
+                            </span>
+                        <% } else if (isPureSelf) { %>
                             <span class="status-chip self-task" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:2px 7px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
                                 <i class="fa-solid fa-user-check"></i> Self Task
                             </span>
@@ -247,16 +288,13 @@
                 </div>
 
                 <div class="entity-meta">
-                    <small>
-                        <%= user.role === 'manager' ? 'Assigned To' : 'Assigned By' %>
-                    </small>
+                    <small>Assigned By</small>
+                    <b><%= Number(t.created_by) === user.id ? 'You' : t.creator_name %></b>
+                </div>
 
-                    <b>
-                        <%= user.role === 'manager'
-                            ? t.assigned_name
-                            : t.creator_name
-                        %>
-                    </b>
+                <div class="entity-meta">
+                    <small>Assigned To</small>
+                    <b><%= assignedIds.includes(user.id) && assignedIds.length === 1 ? 'You' : t.assigned_name %></b>
                 </div>
 
                 <div class="entity-meta">
@@ -280,6 +318,30 @@
     </div>
 
 </section>
+
+<script>
+window.filterTaskType = function(type, btn) {
+    document.querySelectorAll('.task-tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.style.opacity = '0.75';
+    });
+    if (btn) {
+        btn.classList.add('active');
+        btn.style.opacity = '1';
+    }
+
+    document.querySelectorAll('.task-card').forEach(card => {
+        const group = card.dataset.filterGroup;
+        if (type === 'all') {
+            card.style.display = '';
+        } else if (type === 'assigned-to-me') {
+            card.style.display = (group === 'assigned-to-me' || group === 'self') ? '' : 'none';
+        } else if (type === 'assigned-by-me') {
+            card.style.display = (group === 'assigned-by-me') ? '' : 'none';
+        }
+    });
+};
+</script>
 
 <%- include('partials/task-modal') %>
 
