@@ -231,11 +231,13 @@
 
                 <div class="entity-title">
 
-                    <div class="task-title-row">
-
-                        <a href="/tasks/<%= t.id %>">
+                    <div class="task-card-heading" style="margin-bottom: 4px;">
+                        <a href="/tasks/<%= t.id %>" style="font-weight: 800; font-size: 15px; color: #0f172a; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <%= t.title %>
                         </a>
+                    </div>
+
+                    <div class="task-title-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
 
                         <% if (t.is_routine) { %>
                             <span class="routine-badge"><i class="fa-solid fa-repeat"></i> Daily Routine</span>
