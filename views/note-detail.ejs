@@ -3,25 +3,24 @@
 
 <style>
 .note-editor-card {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     min-height: calc(100vh - 140px);
 }
 
 .note-editor-topbar {
-    padding: 14px 20px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 0 !important;
+    background: transparent !important;
+    border-bottom: 1px solid #e2e8f0 !important;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+    margin-bottom: 16px !important;
 }
 
 .save-status-badge {
@@ -53,42 +52,12 @@
     border: 1px solid #fca5a5;
 }
 
-.notes-toolbar {
-    padding: 10px 20px;
-    background: #ffffff;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.note-tool-btn {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    color: #334155;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: background 0.15s ease;
-}
-
-.note-tool-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-}
-
 .note-editor-body {
-    padding: 24px;
+    padding: 0 !important;
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 html body input#note-title-input.note-title-field,
@@ -100,8 +69,8 @@ html body .note-title-field,
     border-style: none !important;
     outline: none !important;
     box-shadow: none !important;
-    font-size: 22px !important;
-    font-weight: 800 !important;
+    font-size: 26px !important;
+    font-weight: 700 !important;
     color: #0f172a !important;
     background: transparent !important;
     padding: 4px 0 !important;
@@ -121,26 +90,60 @@ html body .note-title-field:focus,
     background: transparent !important;
 }
 
-.note-details-field {
-    width: 100% !important;
-    flex: 1 !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
-    outline: none !important;
-    font-size: 15px !important;
-    line-height: 1.6 !important;
-    color: #334155 !important;
-    background: #ffffff !important;
-    resize: vertical !important;
-    font-family: inherit !important;
-    min-height: 380px !important;
-    padding: 14px !important;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+/* Make CKEditor borderless and full height */
+.note-editor-body .ck-editor {
+    border: none !important;
+    box-shadow: none !important;
 }
 
-.note-details-field:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+.note-editor-body .ck.ck-editor__main>.ck-editor__editable {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    font-size: 16px !important;
+    color: #334155 !important;
+    min-height: calc(100vh - 260px) !important;
+    padding-bottom: 80px !important; /* Spacing for the sticky bottom toolbar */
+}
+
+/* Sticky Bottom Formatting Toolbar */
+.note-editor-body .ck-editor__top {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-bottom: none !important;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom)) !important;
+}
+
+.note-editor-body .ck-toolbar {
+    background: transparent !important;
+    border: none !important;
+    justify-content: center !important;
+}
+
+.note-editor-body .ck-toolbar__items {
+    gap: 16px !important;
+}
+
+.note-editor-body .ck.ck-button {
+    font-size: 18px !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    color: #475569 !important;
+    background: #f1f5f9 !important;
+    transition: all 0.2s ease !important;
+}
+
+.note-editor-body .ck.ck-button:hover,
+.note-editor-body .ck.ck-button.ck-on {
+    background: #e0e7ff !important;
+    color: #4f46e5 !important;
 }
 </style>
 
