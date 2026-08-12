@@ -20,8 +20,8 @@ async function syncDailyRoutines() {
             if (!existingTask) {
                 const res = await db.prepare(`
                     INSERT INTO tasks 
-                    (project_id, title, description, priority, status, due_date, created_by, assigned_to, estimated_hours, routine_id, is_routine)
-                    VALUES (?, ?, ?, ?, 'Pending', CURDATE(), ?, ?, ?, ?, 1)
+                    (project_id, title, description, priority, priority_id, status, status_id, due_date, created_by, assigned_to, estimated_hours, routine_id, is_routine)
+                    VALUES (?, ?, ?, ?, 2, 'Pending', 0, CURDATE(), ?, ?, ?, ?, 1)
                 `).run(
                     routine.project_id,
                     routine.title,

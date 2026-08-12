@@ -44,6 +44,11 @@ async function init() {
     await base.query(`CREATE DATABASE IF NOT EXISTS \`${config.mysql.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
     await base.end();
     pool = mysql.createPool(config.mysql);
+    if (pool && typeof pool.on === 'function') {
+        pool.on('error', (err) => {
+            console.error('MySQL Pool Error (Handled):', err);
+        });
+    }
     try { await pool.query("SET time_zone = '+05:30'"); } catch (e) { }
     await migrateOldTables();
     await pool.query(`

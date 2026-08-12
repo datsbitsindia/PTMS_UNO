@@ -11,6 +11,14 @@ const {
 } = require('./middleware/auth');
 const helpers = require('./utils/helpers');
 const notifications = require('./services/notificationService');
+
+process.on('uncaughtException', (err) => {
+    console.error('CRITICAL UNCAUGHT EXCEPTION (Server kept running):', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('CRITICAL UNHANDLED REJECTION (Server kept running):', reason);
+});
+
 async function start() {
     await database.init();
     fs.mkdirSync(config.uploadDir, {
