@@ -58,6 +58,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative !important;
 }
 
 html body input#note-title-input.note-title-field,
@@ -73,7 +74,7 @@ html body .note-title-field,
     font-weight: 700 !important;
     color: #0f172a !important;
     background: transparent !important;
-    padding: 4px 0 !important;
+    padding: 4px 110px 4px 0 !important; /* 110px right padding for toolbar */
     border-radius: 0 !important;
     min-height: 0 !important;
     height: auto !important;
@@ -107,41 +108,51 @@ html body .note-title-field:focus,
     padding-bottom: 10px !important;
 }
 
-/* Formatting Toolbar on Top */
+/* Formatting Toolbar inline on the top right */
 .note-editor-body .ck-editor__top {
-    position: relative !important;
+    position: absolute !important;
+    top: 6px !important;
+    right: 0 !important;
     z-index: 10 !important;
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 8px !important;
+    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
-    padding: 4px 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
     display: block !important;
-    margin-bottom: 8px !important;
 }
 
 .note-editor-body .ck-toolbar {
     background: transparent !important;
     border: none !important;
+    padding: 0 !important;
 }
 
 .note-editor-body .ck-toolbar__items {
-    gap: 8px !important;
+    gap: 4px !important;
 }
 
 .note-editor-body .ck.ck-button {
-    font-size: 15px !important;
-    padding: 4px 10px !important;
+    font-size: 13px !important;
+    padding: 4px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    height: 28px !important;
     border-radius: 6px !important;
     color: #475569 !important;
-    background: transparent !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
     transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .note-editor-body .ck.ck-button:hover,
 .note-editor-body .ck.ck-button.ck-on {
-    background: #edf2f7 !important;
-    color: #0f172a !important;
+    background: #e0e7ff !important;
+    color: #4f46e5 !important;
+    border-color: #c7d2fe !important;
 }
 </style>
 
