@@ -104,58 +104,44 @@ html body .note-title-field:focus,
     font-size: 16px !important;
     color: #334155 !important;
     min-height: calc(100vh - 260px) !important;
-    padding-bottom: 80px !important; /* Spacing for the sticky bottom toolbar */
+    padding-bottom: 10px !important;
 }
 
-/* Sticky Bottom Formatting Toolbar */
+/* Formatting Toolbar on Top */
 .note-editor-body .ck-editor__top {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 9999 !important;
-    background: #ffffff !important;
-    border-top: 1px solid #e2e8f0 !important;
-    border-bottom: none !important;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
-    padding: 6px 12px calc(6px + env(safe-area-inset-bottom)) !important;
-    display: none !important; /* Hidden by default */
-}
-
-/* Hide main navigation sidebar when editing */
-body.editor-focused .sidebar,
-body.title-focused .sidebar {
-    display: none !important;
-}
-
-/* Show formatting toolbar only when editing details */
-body.editor-focused .note-editor-body .ck-editor__top {
+    position: relative !important;
+    z-index: 10 !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 4px 8px !important;
     display: block !important;
+    margin-bottom: 8px !important;
 }
 
 .note-editor-body .ck-toolbar {
     background: transparent !important;
     border: none !important;
-    justify-content: center !important;
 }
 
 .note-editor-body .ck-toolbar__items {
-    gap: 16px !important;
+    gap: 8px !important;
 }
 
 .note-editor-body .ck.ck-button {
-    font-size: 18px !important;
-    padding: 8px 16px !important;
-    border-radius: 8px !important;
+    font-size: 15px !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
     color: #475569 !important;
-    background: #f1f5f9 !important;
+    background: transparent !important;
     transition: all 0.2s ease !important;
 }
 
 .note-editor-body .ck.ck-button:hover,
 .note-editor-body .ck.ck-button.ck-on {
-    background: #e0e7ff !important;
-    color: #4f46e5 !important;
+    background: #edf2f7 !important;
+    color: #0f172a !important;
 }
 </style>
 
@@ -215,14 +201,6 @@ body.editor-focused .note-editor-body .ck-editor__top {
             if (editor) {
                 window.noteEditor = editor;
                 editor.model.document.on('change:data', scheduleAutoSave);
-
-                // Add body class on focus/blur to control floating toolbar and nav sidebar visibility
-                editor.editing.view.document.on('focus', () => {
-                    document.body.classList.add('editor-focused');
-                });
-                editor.editing.view.document.on('blur', () => {
-                    document.body.classList.remove('editor-focused');
-                });
             }
         });
     }
@@ -268,11 +246,7 @@ body.editor-focused .note-editor-body .ck-editor__top {
     // Event Listeners for Input & Blur
     if (titleInput) {
         titleInput.addEventListener('input', scheduleAutoSave);
-        titleInput.addEventListener('focus', () => {
-            document.body.classList.add('title-focused');
-        });
         titleInput.addEventListener('blur', () => {
-            document.body.classList.remove('title-focused');
             if (hasUnsavedChanges) autoSave();
         });
     }
