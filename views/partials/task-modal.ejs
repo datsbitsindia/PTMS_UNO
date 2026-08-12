@@ -245,27 +245,33 @@
     });
 
     <% if (user.role === 'employee') { %>
-    // Dynamically update submit button text for employees
+    // Dynamically update submit button text for employees using MutationObserver
     function updateTaskSubmitBtnText() {
         const chipContainer = document.getElementById('single-task-assignee-chips');
         const submitBtn = document.getElementById('single-task-submit-btn');
         if (!chipContainer || !submitBtn) return;
         const inputs = chipContainer.querySelectorAll('input[name="assigned_to"]');
-        const myId = '<%= user.id %>';
-        const isOnlySelf = inputs.length === 0 || (inputs.length === 1 && inputs[0].value == myId);
-        submitBtn.textContent = isOnlySelf ? 'Create Self Task' : 'Assign Task';
+        const myId = String('<%= user.id %>');
+
+        let hasOtherAssignee = false;
+        inputs.forEach(inp => {
+            if (String(inp.value) !== myId) {
+                hasOtherAssignee = true;
+            }
+        });
+
+        submitBtn.textContent = hasOtherAssignee ? 'Assign Task' : 'Create Self Task';
     }
-    // Override addAssigneeChip and removeAssigneeChip to also call updateTaskSubmitBtnText
-    const _origAdd = window.addAssigneeChip;
-    window.addAssigneeChip = function(...args) {
-        _origAdd.apply(this, args);
-        updateTaskSubmitBtnText();
-    };
-    const _origRemove = window.removeAssigneeChip;
-    window.removeAssigneeChip = function(btnEl) {
-        _origRemove.apply(this, [btnEl]);
-        updateTaskSubmitBtnText();
-    };
+
+    const chipContainerEl = document.getElementById('single-task-assignee-chips');
+    if (chipContainerEl) {
+        const observer = new MutationObserver(() => {
+            updateTaskSubmitBtnText();
+        });
+        observer.observe(chipContainerEl, { childList: true, subtree: true });
+    }
+    updateTaskSubmitBtnText();
+    setTimeout(updateTaskSubmitBtnText, 300);
     <% } %>
     </script>
 
