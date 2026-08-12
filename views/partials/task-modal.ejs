@@ -118,8 +118,8 @@
                         <button type="button" class="btn" data-close>
                             Cancel
                         </button>
-                        <button type="submit" class="btn primary">
-                            <%= user.role === 'employee' ? 'Create Self Task' : 'Assign Task' %>
+                        <button type="submit" class="btn primary" id="single-task-submit-btn">
+                            <% if (user.role === 'employee') { %>Create Self Task<% } else { %>Assign Task<% } %>
                         </button>
                     </div>
 
@@ -243,6 +243,30 @@
             chipContainer.appendChild(defaultInput);
         }
     });
+
+    <% if (user.role === 'employee') { %>
+    // Dynamically update submit button text for employees
+    function updateTaskSubmitBtnText() {
+        const chipContainer = document.getElementById('single-task-assignee-chips');
+        const submitBtn = document.getElementById('single-task-submit-btn');
+        if (!chipContainer || !submitBtn) return;
+        const inputs = chipContainer.querySelectorAll('input[name="assigned_to"]');
+        const myId = '<%= user.id %>';
+        const isOnlySelf = inputs.length === 0 || (inputs.length === 1 && inputs[0].value == myId);
+        submitBtn.textContent = isOnlySelf ? 'Create Self Task' : 'Assign Task';
+    }
+    // Override addAssigneeChip and removeAssigneeChip to also call updateTaskSubmitBtnText
+    const _origAdd = window.addAssigneeChip;
+    window.addAssigneeChip = function(...args) {
+        _origAdd.apply(this, args);
+        updateTaskSubmitBtnText();
+    };
+    const _origRemove = window.removeAssigneeChip;
+    window.removeAssigneeChip = function(btnEl) {
+        _origRemove.apply(this, [btnEl]);
+        updateTaskSubmitBtnText();
+    };
+    <% } %>
     </script>
 
 <% } %>
