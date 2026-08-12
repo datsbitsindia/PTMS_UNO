@@ -16,7 +16,7 @@
     </a>
     <div class="project-hero-top">
         <h1><%= project.name %></h1>
-        <% if (user.role === 'admin' || user.role === 'manager') { %>
+        <% if (user.role === 'admin') { %>
             <button type="button" class="hero-icon-pen-btn" data-open="edit-project-modal" title="Edit Project">
                 <i class="fa-solid fa-pen"></i>
             </button>
@@ -167,7 +167,7 @@
     </section>
 <% } %>
 
-<% if (user.role === 'admin' || user.role === 'manager') { %>
+<% if (user.role === 'admin') { %>
 <div class="modal" id="edit-project-modal">
     <div class="modal-card">
         <button class="modal-close" data-close>&times;</button>

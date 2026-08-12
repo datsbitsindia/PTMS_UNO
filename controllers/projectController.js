@@ -95,6 +95,9 @@ exports.save = async (req, res) => {
     } = req.body;
 
     if (id) {
+        if (req.session.user.role !== 'admin') {
+            return res.status(403).render('error', { message: 'Access denied. Only Admin can edit project details.' });
+        }
         const existing = await db.prepare('SELECT * FROM projects WHERE id=?').get(id);
         if (!existing) return res.status(404).render('error', { message: 'Project not found' });
 
