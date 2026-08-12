@@ -111,27 +111,54 @@ exports.toggle = async (req, res) => {
 };
 
 exports.remove = async (req, res) => {
-    const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
-    if (!user) return res.status(404).render('error', { message: 'User not found' });
-    if (req.session.user.role !== 'admin' && user.role !== 'employee') {
-        return res.status(403).render('error', { message: 'Access denied.' });
-    }
-
     try {
-        if (user.role === 'manager') {
-            await db.prepare('UPDATE projects SET manager_id=NULL WHERE manager_id=?').run(user.id);
-        } else {
-            await db.prepare('DELETE FROM daily_routine_logs WHERE assigned_to=?').run(user.id);
-            await db.prepare('DELETE FROM daily_routines WHERE assigned_to=?').run(user.id);
-            await db.prepare('DELETE FROM tasks WHERE assigned_to=?').run(user.id);
+        const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
+        if (!user) return res.status(404).render('error', { message: 'User not found' });
+        if (req.session.user.role !== 'admin' && user.role !== 'employee') {
+            return res.status(403).render('error', { message: 'Access denied.' });
         }
-        await db.prepare('DELETE FROM notifications WHERE user_id=?').run(user.id);
-        await db.prepare('DELETE FROM comments WHERE user_id=?').run(user.id);
-        await db.prepare('DELETE FROM attachments WHERE user_id=?').run(user.id);
+
+        const adminUser = await db.prepare("SELECT id FROM users WHERE role='admin' LIMIT 1").get();
+        const fallbackAdminId = adminUser ? adminUser.id : req.session.user.id;
+
+        // 1. Clean up project_assignees and project_updates for this user
+        try { await db.prepare('DELETE FROM project_assignees WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM project_updates WHERE manager_id=?').run(user.id); } catch(e){}
+
+        // 2. Handle projects where user is manager_id or created_by
+        const projects = await db.prepare('SELECT id, manager_id FROM projects WHERE created_by=? OR FIND_IN_SET(?, manager_id) > 0').all(user.id, user.id);
+        for (const p of projects) {
+            const currentManagers = String(p.manager_id || '').split(',').map(x => Number(x.trim())).filter(x => x && x !== user.id);
+            const newManagerStr = currentManagers.length > 0 ? currentManagers.join(',') : String(fallbackAdminId);
+            await db.prepare('UPDATE projects SET manager_id=?, created_by=CASE WHEN created_by=? THEN ? ELSE created_by END WHERE id=?').run(
+                newManagerStr, user.id, fallbackAdminId, p.id
+            );
+        }
+
+        // 3. Clean up tasks, task_assignees, task_forward_logs, daily_routines, daily_routine_logs
+        try { await db.prepare('DELETE FROM task_assignees WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?').run(user.id, user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM daily_routine_logs WHERE assigned_to=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM daily_routines WHERE assigned_to=? OR created_by=?').run(user.id, user.id); } catch(e){}
+        
+        // Update tasks created by this user or assigned to this user
+        try { await db.prepare('UPDATE tasks SET created_by=? WHERE created_by=?').run(fallbackAdminId, user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM tasks WHERE assigned_to=? OR FIND_IN_SET(?, assigned_to) > 0').run(String(user.id), String(user.id)); } catch(e){}
+
+        // 4. Clean up notifications, comments, attachments, audit logs
+        try { await db.prepare('DELETE FROM notifications WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM comments WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM attachments WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('DELETE FROM audit_events WHERE user_id=?').run(user.id); } catch(e){}
+        try { await db.prepare('UPDATE activity_logs SET user_id=NULL WHERE user_id=?').run(user.id); } catch(e){}
+
+        // 5. Finally delete the user safely
         await db.prepare('DELETE FROM users WHERE id=?').run(user.id);
         await activity.log(req.session.user.id, 'User Deleted', user.name);
+
         res.redirect('/employees');
     } catch (e) {
+        console.error('Error removing user:', e);
         res.status(500).render('error', { message: 'Could not delete user: ' + e.message });
     }
 };
