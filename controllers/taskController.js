@@ -434,18 +434,22 @@ exports.saveRoutine = async (req, res) => {
         });
     }
 
+    const priorityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Critical': 3 };
+    const priorityInt = priorityMap[priority] ?? 2; // Default to 2 (High)
+
     for (const assigneeId of assignees) {
         await db.prepare(`
             INSERT INTO daily_routines
-            (project_id, created_by, assigned_to, title, description, priority, estimated_hours, start_date, end_date, daily_time, mandatory, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            (project_id, created_by, assigned_to, title, description, priority, priority_id, estimated_hours, start_date, end_date, daily_time, mandatory, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
         `).run(
             pid,
             req.session.user.id,
             assigneeId,
             title,
             description,
-            priority,
+            priorityInt,
+            priorityInt,
             Number(estimated_hours) || 0,
             start_date,
             end_date,
