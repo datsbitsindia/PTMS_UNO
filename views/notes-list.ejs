@@ -98,6 +98,14 @@
     text-align: center;
     color: #64748b;
 }
+
+mark.note-search-highlight {
+    background-color: #fef08a;
+    color: #854d0e;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-weight: 700;
+}
 </style>
 
 <div class="notes-page-header">
@@ -134,10 +142,13 @@
 
 <% if (notes && notes.length > 0) { %>
     <div class="notes-grid" id="notes-grid-container">
-        <% notes.forEach(n => { %>
-            <a href="/notes/<%= n.id %>" class="note-card" data-title="<%= (n.title || '').toLowerCase() %>" data-details="<%= (n.details || '').replace(/<[^>]*>?/gm, '').toLowerCase() %>">
-                <div class="note-card-title"><%= n.title || 'Untitled Note' %></div>
-                <div class="note-card-snippet"><%= n.details ? n.details.replace(/<[^>]*>?/gm, '').substring(0, 100) : 'Empty note...' %></div>
+        <% notes.forEach(n => { 
+            const noteTitle = n.title || 'Untitled Note';
+            const noteSnippet = n.details ? n.details.replace(/<[^>]*>?/gm, '').substring(0, 100) : 'Empty note...';
+        %>
+            <a href="/notes/<%= n.id %>" class="note-card">
+                <div class="note-card-title" data-original-text="<%= noteTitle %>"><%= noteTitle %></div>
+                <div class="note-card-snippet" data-original-text="<%= noteSnippet %>"><%= noteSnippet %></div>
                 <div class="note-card-footer">
                     <span><i class="fa-regular fa-clock"></i> <%= formatDateTime(n.updated_at) %></span>
                 </div>
@@ -171,24 +182,52 @@
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('notes-search-input');
     const container = document.getElementById('notes-grid-container');
-    if (!input || !container) return;
+    if (!container) return;
 
-    input.addEventListener('input', function() {
-        const query = this.value.toLowerCase().trim();
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightMatch(element, originalText, query) {
+        if (!query) {
+            element.textContent = originalText;
+            return;
+        }
+        const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+        element.innerHTML = originalText.replace(regex, '<mark class="note-search-highlight">$1</mark>');
+    }
+
+    function applyFilterAndHighlight() {
+        const query = (input ? input.value : '').trim();
         const cards = container.querySelectorAll('.note-card');
         
         cards.forEach(card => {
-            const title = card.getAttribute('data-title') || '';
-            const details = card.getAttribute('data-details') || '';
-            if (!query || title.includes(query) || details.includes(query)) {
+            const titleEl = card.querySelector('.note-card-title');
+            const snippetEl = card.querySelector('.note-card-snippet');
+            const origTitle = titleEl ? (titleEl.getAttribute('data-original-text') || titleEl.textContent) : '';
+            const origSnippet = snippetEl ? (snippetEl.getAttribute('data-original-text') || snippetEl.textContent) : '';
+
+            const titleLower = origTitle.toLowerCase();
+            const snippetLower = origSnippet.toLowerCase();
+            const queryLower = query.toLowerCase();
+
+            if (!queryLower || titleLower.includes(queryLower) || snippetLower.includes(queryLower)) {
                 card.style.display = 'flex';
+                if (titleEl) highlightMatch(titleEl, origTitle, query);
+                if (snippetEl) highlightMatch(snippetEl, origSnippet, query);
             } else {
                 card.style.display = 'none';
             }
         });
-    });
+    }
+
+    if (input) {
+        input.addEventListener('input', applyFilterAndHighlight);
+    }
+    applyFilterAndHighlight();
 });
 </script>
 
 <%- include('partials/foot') %>
+
 
