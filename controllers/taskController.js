@@ -508,16 +508,18 @@ exports.status = async (req, res) => {
 
     await db.prepare("UPDATE tasks SET status=?, status_id=?, completed_at=CASE WHEN ?=2 THEN NOW() ELSE NULL END, updated_by=? WHERE id=?")
         .run(overallStatusId, overallStatusId, overallStatusId, req.session.user.id, task.id);
+    const newStatus = newStatusStr;
 
-
-
+    // Resolve overall status name from id
+    const overallStatusRow = await db.prepare('SELECT name FROM statuses WHERE id=? LIMIT 1').get(overallStatusId);
+    const overallStatus = overallStatusRow ? overallStatusRow.name : newStatus;
 
     if (task.is_routine) {
-        await routineService.updateRoutineLogStatus(task.id, overallStatus);
+        try { await routineService.updateRoutineLogStatus(task.id, overallStatus); } catch(e) {}
     }
 
-    await activity.log(req.session.user.id, newStatus === 'Completed' ? 'Task Completed' : 'Task Updated', task.title);
-    await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`);
+    try { await activity.log(req.session.user.id, newStatus === 'Completed' ? 'Task Completed' : 'Task Updated', task.title); } catch(e) {}
+    try { await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`); } catch(e) {}
 
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
         return res.json({
