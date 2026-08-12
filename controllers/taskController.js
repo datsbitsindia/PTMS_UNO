@@ -8,23 +8,39 @@ const routineService = require('../services/routineService');
 const config = require('../config');
 
 const baseQuery = `
-    SELECT t.*,
-        COALESCE(pr.name, CAST(t.priority AS CHAR), 'Medium') AS priority,
-        COALESCE(st_user.name, st_task.name, CAST(t.status AS CHAR), 'Pending') AS status,
-        COALESCE(st_user.name, st_task.name, CAST(t.status AS CHAR), 'Pending') AS user_status,
-        COALESCE(ta.completed_at, t.completed_at) AS completed_at,
+    SELECT DISTINCT t.*,
         COALESCE(
-            (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM task_assignees ta2 JOIN users u ON u.id=ta2.user_id WHERE ta2.task_id=t.id),
-            (SELECT GROUP_CONCAT(u.name SEPARATOR ', ') FROM users u WHERE FIND_IN_SET(u.id, t.assigned_to) > 0),
+            (SELECT name FROM priorities WHERE id = t.priority_id LIMIT 1),
+            (SELECT name FROM priorities WHERE normalized_name = LOWER(t.priority) LIMIT 1),
+            t.priority, 'Medium'
+        ) AS priority,
+        COALESCE(
+            (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) LIMIT 1),
+            (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(t.status AS CHAR)) LIMIT 1),
+            CAST(t.status AS CHAR), 'Pending'
+        ) AS status,
+        COALESCE(
+            (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) LIMIT 1),
+            (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
+            CAST(t.status AS CHAR), 'Pending'
+        ) AS user_status,
+        COALESCE(ta_sub.completed_at, t.completed_at) AS completed_at,
+        COALESCE(
+            (SELECT GROUP_CONCAT(u.name ORDER BY u.name SEPARATOR ', ') FROM task_assignees ta2 JOIN users u ON u.id=ta2.user_id WHERE ta2.task_id=t.id),
+            (SELECT GROUP_CONCAT(u.name ORDER BY u.id SEPARATOR ', ') FROM users u WHERE FIND_IN_SET(u.id, t.assigned_to) > 0),
             a.name
         ) AS assigned_name,
         c.name creator_name, p.name project_name, p.manager_id,
-        CASE WHEN t.due_date<CURDATE() AND COALESCE(st_user.name, st_task.name, '') NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue
+        CASE WHEN t.due_date<CURDATE() AND COALESCE(
+            (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
+            (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
+            CAST(t.status AS CHAR), ''
+        ) NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue
     FROM tasks t
-    LEFT JOIN priorities pr ON pr.id = t.priority OR pr.id = t.priority_id
-    LEFT JOIN task_assignees ta ON ta.task_id=t.id AND ta.user_id=?
-    LEFT JOIN statuses st_user ON st_user.id = ta.status OR st_user.id = ta.status_id
-    LEFT JOIN statuses st_task ON st_task.id = t.status OR st_task.id = t.status_id
+    LEFT JOIN task_assignees ta_sub ON ta_sub.task_id=t.id AND ta_sub.user_id=?
     LEFT JOIN users a ON a.id=t.assigned_to
     JOIN users c ON c.id=t.created_by
     LEFT JOIN projects p ON p.id=t.project_id
@@ -158,7 +174,19 @@ exports.detail = async (req, res) => {
     `).all(task.id);
 
     const taskAssignees = await db.prepare(`
-        SELECT ta.*, u.name, u.role, u.designation
+        SELECT ta.*,
+            u.name, u.role, u.designation,
+            COALESCE(
+                (SELECT name FROM statuses WHERE id = ta.status_id LIMIT 1),
+                (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta.status AS CHAR)) LIMIT 1),
+                CASE CAST(ta.status AS CHAR)
+                    WHEN '0' THEN 'Pending'
+                    WHEN '1' THEN 'In Progress'
+                    WHEN '2' THEN 'Completed'
+                    WHEN '3' THEN 'Cancelled'
+                    ELSE COALESCE(CAST(ta.status AS CHAR), 'Pending')
+                END
+            ) AS status
         FROM task_assignees ta
         JOIN users u ON u.id=ta.user_id
         WHERE ta.task_id=?
