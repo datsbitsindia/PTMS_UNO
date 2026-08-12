@@ -119,6 +119,18 @@ html body .note-title-field:focus,
     border-bottom: none !important;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05) !important;
     padding: 6px 12px calc(6px + env(safe-area-inset-bottom)) !important;
+    display: none !important; /* Hidden by default */
+}
+
+/* Hide main navigation sidebar when editing */
+body.editor-focused .sidebar,
+body.title-focused .sidebar {
+    display: none !important;
+}
+
+/* Show formatting toolbar only when editing details */
+body.editor-focused .note-editor-body .ck-editor__top {
+    display: block !important;
 }
 
 .note-editor-body .ck-toolbar {
@@ -203,6 +215,14 @@ html body .note-title-field:focus,
             if (editor) {
                 window.noteEditor = editor;
                 editor.model.document.on('change:data', scheduleAutoSave);
+
+                // Add body class on focus/blur to control floating toolbar and nav sidebar visibility
+                editor.editing.view.document.on('focus', () => {
+                    document.body.classList.add('editor-focused');
+                });
+                editor.editing.view.document.on('blur', () => {
+                    document.body.classList.remove('editor-focused');
+                });
             }
         });
     }
@@ -248,7 +268,11 @@ html body .note-title-field:focus,
     // Event Listeners for Input & Blur
     if (titleInput) {
         titleInput.addEventListener('input', scheduleAutoSave);
+        titleInput.addEventListener('focus', () => {
+            document.body.classList.add('title-focused');
+        });
         titleInput.addEventListener('blur', () => {
+            document.body.classList.remove('title-focused');
             if (hasUnsavedChanges) autoSave();
         });
     }
