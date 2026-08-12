@@ -151,7 +151,6 @@ exports.save = async (req, res) => {
             await notifications.notify(mId, `New project assigned: ${name}`, `/projects/${projectId}`);
         }
         res.redirect('/projects');
-    }
 };
 
 exports.detail = async (req, res) => {
