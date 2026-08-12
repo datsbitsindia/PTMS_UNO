@@ -493,25 +493,3 @@ window.removeAssigneeChip = function(btnEl) {
     if (chip) chip.remove();
 };
 
-// Detect when virtual keyboard is likely open to hide bottom navigation sidebar
-(function() {
-    const inputs = 'input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]), textarea, [contenteditable="true"], .ck-editor__editable';
-    
-    document.addEventListener('focusin', (e) => {
-        if (e.target && e.target.matches(inputs)) {
-            document.body.classList.add('keyboard-open');
-        }
-    });
-
-    document.addEventListener('focusout', (e) => {
-        if (e.target && e.target.matches(inputs)) {
-            setTimeout(() => {
-                const active = document.activeElement;
-                if (!active || !active.matches(inputs)) {
-                    document.body.classList.remove('keyboard-open');
-                }
-            }, 50);
-        }
-    });
-})();
-
