@@ -74,7 +74,7 @@ html body .note-title-field,
     font-weight: 700 !important;
     color: #0f172a !important;
     background: transparent !important;
-    padding: 4px 110px 4px 0 !important; /* 110px right padding for toolbar */
+    padding: 4px 42px 4px 0 !important; /* 42px right padding for vertical toolbar */
     border-radius: 0 !important;
     min-height: 0 !important;
     height: auto !important;
@@ -129,7 +129,9 @@ html body .note-title-field:focus,
 }
 
 .note-editor-body .ck-toolbar__items {
-    gap: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
 }
 
 .note-editor-body .ck.ck-button {
