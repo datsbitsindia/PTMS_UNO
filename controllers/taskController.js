@@ -92,7 +92,23 @@ exports.list = async (req, res) => {
         params.push(`%${req.query.q}%`, `%${req.query.q}%`);
     }
 
-    const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY CASE WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('4','planned') THEN 1 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('0','pending') THEN 2 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('1','in progress') THEN 3 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('2','completed') THEN 4 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('3','cancelled') THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
+const statusRank = (statusStr) => {
+    const s = String(statusStr || '').toLowerCase().trim();
+    if (s === 'planned' || s === '4') return 1;
+    if (s === 'pending' || s === '0') return 2;
+    if (s === 'in progress' || s === '1') return 3;
+    if (s === 'completed' || s === '2') return 4;
+    if (s === 'cancelled' || s === '3') return 5;
+    return 6;
+};
+
+    const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY t.created_at DESC").all(...params);
+    tasks.sort((a, b) => {
+        const rA = statusRank(a.status || a.user_status);
+        const rB = statusRank(b.status || b.user_status);
+        if (rA !== rB) return rA - rB;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
     const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
     const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
 
