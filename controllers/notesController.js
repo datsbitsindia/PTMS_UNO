@@ -3,10 +3,19 @@ const { db } = require('../database/init');
 exports.list = async (req, res) => {
     try {
         const userId = req.session.user.id;
-        const notes = await db.prepare("SELECT * FROM notes WHERE user_id=? ORDER BY updated_at DESC").all(userId);
+        const searchQuery = req.query.q ? String(req.query.q).trim() : '';
+
+        let notes;
+        if (searchQuery) {
+            const term = `%${searchQuery.toLowerCase()}%`;
+            notes = await db.prepare("SELECT * FROM notes WHERE user_id=? AND (LOWER(title) LIKE ? OR LOWER(details) LIKE ?) ORDER BY updated_at DESC").all(userId, term, term);
+        } else {
+            notes = await db.prepare("SELECT * FROM notes WHERE user_id=? ORDER BY updated_at DESC").all(userId);
+        }
 
         res.render('notes-list', {
             notes: notes || [],
+            searchQuery,
             page: 'notes'
         });
     } catch (err) {
