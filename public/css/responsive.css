@@ -821,6 +821,11 @@ html body .entity-card.manager-card .row-actions {
     }
 }
 
+/* Hide bottom navigation bar when virtual keyboard is open */
+body.keyboard-open .sidebar {
+    display: none !important;
+}
+
 
 
 
