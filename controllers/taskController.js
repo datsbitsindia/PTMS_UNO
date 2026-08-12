@@ -92,7 +92,7 @@ exports.list = async (req, res) => {
         params.push(`%${req.query.q}%`, `%${req.query.q}%`);
     }
 
-    const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY CASE LOWER(COALESCE(ta.status, t.status)) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
+    const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY CASE WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('4','planned') THEN 1 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('0','pending') THEN 2 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('1','in progress') THEN 3 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('2','completed') THEN 4 WHEN LOWER(CAST(COALESCE(ta.status, t.status, '') AS CHAR)) IN ('3','cancelled') THEN 5 ELSE 6 END, t.created_at DESC").all(...params);
     const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
     const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
 

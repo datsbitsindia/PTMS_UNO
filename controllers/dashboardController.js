@@ -35,10 +35,10 @@ exports.index = async (req, res) => {
         taskParams = [u.id, u.id, u.id, u.id, u.id];
     }
 
-    const tasks = await db.prepare(`SELECT t.*, p.name project_name, c.name creator_name, CASE WHEN t.due_date < CURDATE() AND t.status NOT IN ('Completed','Cancelled','2','3') THEN 1 ELSE 0 END is_overdue FROM tasks t LEFT JOIN projects p ON p.id=t.project_id LEFT JOIN users c ON c.id=t.created_by ${taskWhere} ORDER BY t.created_at DESC`).all(...taskParams);
+    const tasks = await db.prepare(`SELECT t.*, p.name project_name, c.name creator_name, CASE WHEN t.due_date < CURDATE() AND t.status NOT IN ('Completed','Cancelled','2','3') THEN 1 ELSE 0 END is_overdue FROM tasks t LEFT JOIN projects p ON p.id=t.project_id LEFT JOIN users c ON c.id=t.created_by ${taskWhere} ORDER BY CASE WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('4','planned') THEN 1 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('0','pending') THEN 2 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('1','in progress') THEN 3 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('2','completed') THEN 4 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('3','cancelled') THEN 5 ELSE 6 END, t.created_at DESC`).all(...taskParams);
     
     const today = new Date().toISOString().slice(0, 10);
-    const projOrder = "ORDER BY p.created_at DESC";
+    const projOrder = "ORDER BY CASE WHEN LOWER(CAST(COALESCE(p.status, '') AS CHAR)) IN ('4','planned') THEN 1 WHEN LOWER(CAST(COALESCE(p.status, '') AS CHAR)) IN ('0','pending') THEN 2 WHEN LOWER(CAST(COALESCE(p.status, '') AS CHAR)) IN ('1','in progress') THEN 3 WHEN LOWER(CAST(COALESCE(p.status, '') AS CHAR)) IN ('2','completed') THEN 4 WHEN LOWER(CAST(COALESCE(p.status, '') AS CHAR)) IN ('3','cancelled') THEN 5 ELSE 6 END, p.created_at DESC";
     const rawProjects = u.role === 'admin'
         ? await db.prepare(`SELECT p.*,m.name manager_name,(SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count,CASE WHEN p.end_date<CURDATE() AND p.status NOT IN (2,3) AND p.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p JOIN users m ON m.id=p.manager_id ${projOrder}`).all()
         : u.role === 'manager'

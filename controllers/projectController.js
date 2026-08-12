@@ -159,7 +159,7 @@ exports.detail = async (req, res) => {
 
     const projectAssignees = await db.prepare('SELECT pa.*, u.name, u.email FROM project_assignees pa JOIN users u ON u.id=pa.user_id WHERE pa.project_id=?').all(project.id);
 
-    const tasks = await db.prepare("SELECT t.*, u.name employee_name FROM tasks t JOIN users u ON u.id=t.assigned_to WHERE t.project_id=? ORDER BY CASE LOWER(t.status) WHEN 'planned' THEN 1 WHEN 'pending' THEN 2 WHEN 'in progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END, t.created_at DESC").all(project.id);
+    const tasks = await db.prepare("SELECT t.*, u.name employee_name FROM tasks t JOIN users u ON u.id=t.assigned_to WHERE t.project_id=? ORDER BY CASE WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('4','planned') THEN 1 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('0','pending') THEN 2 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('1','in progress') THEN 3 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('2','completed') THEN 4 WHEN LOWER(CAST(COALESCE(t.status, '') AS CHAR)) IN ('3','cancelled') THEN 5 ELSE 6 END, t.created_at DESC").all(project.id);
     const updates = await db.prepare('SELECT x.*, u.name manager_name FROM project_updates x JOIN users u ON u.id=x.manager_id WHERE x.project_id=? ORDER BY x.created_at DESC').all(project.id);
     const managers = u.role === 'admin' ? await db.prepare("SELECT id, name FROM users WHERE role='manager' AND active=1 ORDER BY name").all() : [];
 
