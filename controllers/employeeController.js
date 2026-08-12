@@ -101,20 +101,40 @@ exports.save = async (req, res) => {
 
 
 exports.toggle = async (req, res) => {
-    const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
-    if (user && (req.session.user.role === 'admin' || user.role === 'employee')) {
-        const nextState = user.active ? 0 : 1;
-        await db.prepare('UPDATE users SET active=? WHERE id=?').run(nextState, user.id);
-        await activity.log(req.session.user.id, `User ${nextState ? 'Activated' : 'Deactivated'}`, user.name);
+    try {
+        const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
+        let nextState = user ? (user.active ? 0 : 1) : 0;
+        if (user && (req.session.user.role === 'admin' || user.role === 'employee')) {
+            await db.prepare('UPDATE users SET active=? WHERE id=?').run(nextState, user.id);
+            await activity.log(req.session.user.id, `User ${nextState ? 'Activated' : 'Deactivated'}`, user.name);
+        }
+
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({ success: true, id: user ? user.id : req.params.id, active: Boolean(nextState) });
+        }
+        res.redirect('/employees');
+    } catch (e) {
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(500).json({ success: false, message: e.message });
+        }
+        res.redirect('/employees');
     }
-    res.redirect('/employees');
 };
 
 exports.remove = async (req, res) => {
     try {
         const user = await db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
-        if (!user) return res.status(404).render('error', { message: 'User not found' });
+        if (!user) {
+            if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+            return res.status(404).render('error', { message: 'User not found' });
+        }
+
         if (req.session.user.role !== 'admin' && user.role !== 'employee') {
+            if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                return res.status(403).json({ success: false, message: 'Access denied.' });
+            }
             return res.status(403).render('error', { message: 'Access denied.' });
         }
 
@@ -156,9 +176,15 @@ exports.remove = async (req, res) => {
         await db.prepare('DELETE FROM users WHERE id=?').run(user.id);
         await activity.log(req.session.user.id, 'User Deleted', user.name);
 
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({ success: true, id: user.id, message: 'User deleted successfully' });
+        }
         res.redirect('/employees');
     } catch (e) {
         console.error('Error removing user:', e);
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(500).json({ success: false, message: e.message });
+        }
         res.status(500).render('error', { message: 'Could not delete user: ' + e.message });
     }
 };

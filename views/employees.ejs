@@ -152,4 +152,85 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Intercept Delete forms for no-reload deletion
+    document.querySelectorAll('form[action*="/delete"]').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!confirm('Delete this team member? This action cannot be undone.')) {
+                return;
+            }
+            const card = this.closest('.employee-card') || this.closest('article');
+            try {
+                const res = await fetch(this.action, {
+                    method: 'POST',
+                    headers: { 
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json();
+                if (data.success || res.ok) {
+                    if (card) {
+                        card.style.transition = 'all 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => card.remove(), 300);
+                    }
+                } else {
+                    alert(data.message || 'Failed to delete user');
+                }
+            } catch (err) {
+                console.error('Delete error:', err);
+                this.submit();
+            }
+        });
+    });
+
+    // Intercept Toggle forms for no-reload activation toggle
+    document.querySelectorAll('form[action*="/toggle"]').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            const icon = this.querySelector('i');
+            const card = this.closest('.employee-card') || this.closest('article');
+            const statusChip = card ? card.querySelector('.status-chip') : null;
+
+            try {
+                const res = await fetch(this.action, {
+                    method: 'POST',
+                    headers: { 
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const isActive = data.active;
+                    if (icon) {
+                        icon.className = `fa-solid ${isActive ? 'fa-toggle-on' : 'fa-toggle-off'}`;
+                    }
+                    if (btn) {
+                        btn.style.color = isActive ? '#16a34a' : '#94a3b8';
+                        btn.title = isActive ? 'Deactivate member' : 'Activate member';
+                    }
+                    if (statusChip) {
+                        statusChip.className = `status-chip ${isActive ? 'active' : 'inactive'}`;
+                        statusChip.textContent = isActive ? 'Active' : 'Inactive';
+                    }
+                    if (card) {
+                        card.setAttribute('data-status', isActive ? 'Active' : 'Inactive');
+                    }
+                }
+            } catch (err) {
+                console.error('Toggle error:', err);
+                this.submit();
+            }
+        });
+    });
+});
+</script>
+
 <%- include('partials/foot') %>
+
