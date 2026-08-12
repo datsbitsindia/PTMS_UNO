@@ -40,27 +40,26 @@
     </div>
 </div>
 
-<div class="toolbar-ui compact-filter" style="display:flex; flex-direction:column; gap:8px; width:100%; background:#fff; padding:10px 12px; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.04); box-sizing:border-box;">
-    <input type="search" placeholder="Search team members..." style="width:100% !important; min-width:0 !important; height:38px !important; border-radius:10px !important; font-size:13px !important; box-sizing:border-box !important;">
-    <div style="display:flex; gap:8px; width:100%; align-items:center; flex-wrap:nowrap;">
-        <% if (currentUserRole === 'admin') { %>
-            <select style="flex:1 1 0 !important; min-width:0 !important; height:38px !important; border-radius:10px !important; font-size:12px !important; padding:0 6px !important; box-sizing:border-box !important;">
-                <option value="">All Roles</option>
-                <option value="Manager">Manager</option>
-                <option value="Employee">Employee</option>
-            </select>
-        <% } %>
-        <select style="flex:1 1 0 !important; min-width:0 !important; height:38px !important; border-radius:10px !important; font-size:12px !important; padding:0 6px !important; box-sizing:border-box !important;">
-            <option value="">All Departments</option>
-            <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
-                <option><%= x %></option>
-            <% }) %>
+<div class="toolbar-ui compact-filter" style="display:flex; align-items:center; gap:6px; width:100%; flex-wrap:nowrap; background:#fff; padding:8px 10px; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 1px 3px rgba(0,0,0,0.04); box-sizing:border-box; overflow:hidden;">
+    <input type="search" placeholder="Search team..." style="flex:2 1 0 !important; min-width:0 !important; height:36px !important; border-radius:8px !important; font-size:12px !important; padding:0 8px !important; box-sizing:border-box !important;">
+    <% if (currentUserRole === 'admin') { %>
+        <select style="flex:1 1 0 !important; min-width:0 !important; height:36px !important; border-radius:8px !important; font-size:11px !important; padding:0 4px !important; box-sizing:border-box !important;">
+            <option value="">All Roles</option>
+            <option value="Manager">Manager</option>
+            <option value="Employee">Employee</option>
         </select>
-        <button type="button" class="filter-confirm" style="flex:0 0 auto !important; height:38px !important; padding:0 12px !important; border-radius:10px !important; font-size:12px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:4px !important; white-space:nowrap !important;">
-            <i class="fa-solid fa-check"></i> Filter
-        </button>
-    </div>
+    <% } %>
+    <select style="flex:1 1 0 !important; min-width:0 !important; height:36px !important; border-radius:8px !important; font-size:11px !important; padding:0 4px !important; box-sizing:border-box !important;">
+        <option value="">All Depts</option>
+        <% [...new Set(employees.map(e=>e.department).filter(Boolean))].forEach(x=>{ %>
+            <option><%= x %></option>
+        <% }) %>
+    </select>
+    <button type="button" class="filter-confirm" style="flex:0 0 auto !important; height:36px !important; padding:0 10px !important; border-radius:8px !important; font-size:11px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:4px !important; white-space:nowrap !important;">
+        <i class="fa-solid fa-check"></i> Filter
+    </button>
 </div>
+
 
 
 
