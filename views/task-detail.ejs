@@ -8,7 +8,7 @@
 
 <section class="panel task-detail-card">
     <div class="task-detail-header">
-        <a href="<%= user.role === 'admin' ? '/updates' : '/tasks' %>" class="back-link"><i class="fa-solid fa-arrow-left"></i> <%= user.role === 'admin' ? 'Back to updates' : 'Back to tasks' %></a>
+        <a href="/tasks" class="back-link" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#475569; text-decoration:none; margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back to Tasks</a>
         <div class="task-title-group">
             <h2><%= task.title %></h2>
             <span class="project-tag"><i class="fa-solid fa-folder-open"></i> <%= task.project_name||'No project' %></span>
