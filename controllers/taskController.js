@@ -129,7 +129,7 @@ const statusRank = (statusStr) => {
     const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
 
     const reportingUsers = await db.prepare("SELECT id,name,role,designation FROM users WHERE role IN ('manager','admin') AND active=1 ORDER BY role, name").all();
-    const projects = await db.prepare("SELECT id,name FROM projects WHERE status NOT IN ('Completed','Cancelled') OR name='Self Task' ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
+    const projects = await db.prepare("SELECT id,name FROM projects WHERE (status NOT IN (2, 3, '2', '3', 'Completed', 'Cancelled') AND status_id NOT IN (2, 3)) OR name='Self Task' ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
     
     let dailyRoutines = [];
     if (u.role === 'manager') {
