@@ -187,17 +187,13 @@
             <label>Due date
                 <input type="date" name="end_date" value="<%= project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : '' %>" required>
             </label>
-            <% if (user.role === 'admin') { %>
-                <label class="full">Assign manager
-                    <select name="manager_id" required>
-                        <% (typeof managers !== 'undefined' ? managers : []).forEach(m => { %>
-                            <option value="<%= m.id %>" <%= project.manager_id === m.id ? 'selected' : '' %>><%= m.name %></option>
-                        <% }) %>
-                    </select>
-                </label>
-            <% } else { %>
-                <input type="hidden" name="manager_id" value="<%= project.manager_id %>">
-            <% } %>
+            <label class="full">
+                <span>Assigned Managers (Read-Only)</span>
+                <div style="padding:8px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; font-weight:600; color:#334155; font-size:13px; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-lock" style="color:#64748b;"></i> <%= project.manager_name %>
+                </div>
+            </label>
+            <input type="hidden" name="manager_id" value="<%= project.manager_id %>">
             <div class="full actions">
                 <button type="button" class="btn" data-close>Cancel</button>
                 <button class="btn primary">Save Project Changes</button>

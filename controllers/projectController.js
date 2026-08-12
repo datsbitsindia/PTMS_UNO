@@ -94,6 +94,27 @@ exports.save = async (req, res) => {
         end_date
     } = req.body;
 
+    if (id) {
+        const existing = await db.prepare('SELECT * FROM projects WHERE id=?').get(id);
+        if (!existing) return res.status(404).render('error', { message: 'Project not found' });
+
+        if (!name) {
+            return res.status(400).render('error', { message: 'Project name is required' });
+        }
+
+        const managerIds = String(existing.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
+
+        await db.prepare('UPDATE projects SET name=?,description=?,start_date=?,end_date=? WHERE id=?').run(
+            name, description, start_date || null, end_date || null, id
+        );
+
+        await activity.log(req.session.user.id, 'Project Updated', name);
+        for (const mId of managerIds) {
+            await notifications.notify(mId, `Project Updated: ${req.session.user.name} updated details for '${name}'`, `/projects/${id}`);
+        }
+        return res.redirect(`/projects/${id}`);
+    }
+
     const rawInput = req.body.manager_id || req.body.assigned_to;
     let rawManagerIds = [];
     if (Array.isArray(rawInput)) {
@@ -101,7 +122,6 @@ exports.save = async (req, res) => {
     } else if (rawInput) {
         rawManagerIds = [rawInput];
     }
-
 
     const managerIds = [...new Set(rawManagerIds.map(x => Number(x)).filter(Boolean))];
     if (!name || !managerIds.length) {
@@ -111,32 +131,11 @@ exports.save = async (req, res) => {
     }
 
     const managerIdStr = managerIds.join(',');
-
-    if (id) {
-        const existing = await db.prepare('SELECT * FROM projects WHERE id=?').get(id);
-        if (!existing) return res.status(404).render('error', { message: 'Project not found' });
-
-        await db.prepare('UPDATE projects SET name=?,description=?,start_date=?,end_date=?,manager_id=? WHERE id=?').run(
-            name, description, start_date || null, end_date || null, managerIdStr, id
-        );
-
-        if (managerIds.length > 1) {
-            for (const mId of managerIds) {
-                await db.prepare('INSERT IGNORE INTO project_assignees(project_id, user_id, status) VALUES(?,?,?)').run(id, mId, 'Pending');
-            }
-        }
-
-        await activity.log(req.session.user.id, 'Project Updated', name);
-        for (const mId of managerIds) {
-            await notifications.notify(mId, `Project Updated: ${req.session.user.name} updated details for '${name}'`, `/projects/${id}`);
-        }
-        res.redirect(`/projects/${id}`);
-    } else {
-        const statusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get('planned');
-        const statusId = (statusRow && statusRow.id !== undefined) ? statusRow.id : 4;
-        const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,created_by,manager_id,status,status_id) VALUES(?,?,?,?,?,?,?,?)').run(
-            name, description, start_date || null, end_date || null, req.session.user.id, managerIdStr, statusId, statusId
-        );
+    const statusRow = await db.prepare('SELECT id FROM statuses WHERE normalized_name=?').get('planned');
+    const statusId = (statusRow && statusRow.id !== undefined) ? statusRow.id : 4;
+    const result = await db.prepare('INSERT INTO projects(name,description,start_date,end_date,created_by,manager_id,status,status_id) VALUES(?,?,?,?,?,?,?,?)').run(
+        name, description, start_date || null, end_date || null, req.session.user.id, managerIdStr, statusId, statusId
+    );
         const projectId = result.lastInsertRowid;
 
         if (managerIds.length > 1) {
