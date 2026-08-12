@@ -4,7 +4,7 @@ const config = require('../config');
 let pool;
 
 const prefix = config.tablePrefix || 'uno_';
-const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations', 'project_assignees', 'priorities', 'statuses'];
+const names = ['users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations', 'project_assignees', 'priorities', 'statuses', 'audit_events'];
 
 
 
