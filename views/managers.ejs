@@ -51,7 +51,7 @@
                             <i class="fa-solid <%= m.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:16px;"></i>
                         </button>
                     </form>
-                    <form action="/managers/<%= m.id %>/delete" method="post" onsubmit="return confirm('Delete this manager account? Assigned projects will be unassigned.')" style="margin:0;">
+                    <form action="/managers/<%= m.id %>/delete" method="post" data-confirm="Delete this manager account? Assigned projects will be unassigned." style="margin:0;">
                         <button class="icon-btn delete-employee" title="Delete manager">
                             <i class="fa-solid fa-trash"></i>
                         </button>

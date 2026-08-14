@@ -100,7 +100,7 @@
                             <i class="fa-solid <%= e.active ? 'fa-toggle-on' : 'fa-toggle-off' %>" style="font-size:18px;"></i>
                         </button>
                     </form>
-                    <form action="/employees/<%= e.id %>/delete" method="post" onsubmit="return confirm('Delete this team member? This action cannot be undone.')" style="margin:0;">
+                    <form action="/employees/<%= e.id %>/delete" method="post" data-confirm="Delete this team member? This action cannot be undone." style="margin:0;">
                         <button class="icon-btn delete-employee" title="Delete member">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -156,13 +156,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Intercept Delete forms for no-reload deletion
+    // Intercept Delete forms for no-reload deletion with custom confirm modal
     document.querySelectorAll('form[action*="/delete"]').forEach(form => {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!confirm('Delete this team member? This action cannot be undone.')) {
-                return;
-            }
+            const confirmed = await window.showConfirmDialog({
+                title: 'Delete Team Member',
+                message: 'Delete this team member? This action cannot be undone.',
+                confirmText: 'Yes, Delete',
+                danger: true
+            });
+            if (!confirmed) return;
+
             const card = this.closest('.employee-card') || this.closest('article');
             try {
                 const res = await fetch(this.action, {
@@ -181,10 +186,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => card.remove(), 300);
                     }
                 } else {
-                    alert(data.message || 'Failed to delete user');
+                    this.dataset.confirmed = 'true';
+                    this.submit();
                 }
             } catch (err) {
                 console.error('Delete error:', err);
+                this.dataset.confirmed = 'true';
                 this.submit();
             }
         });

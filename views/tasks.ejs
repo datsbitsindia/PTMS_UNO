@@ -97,7 +97,7 @@
                                 <i class="fa-solid <%= r.active ? 'fa-pause' : 'fa-play' %>"></i> <%= r.active ? 'Pause' : 'Activate' %>
                             </button>
                         </form>
-                        <form action="/tasks/routine/<%= r.id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('Delete this routine schedule?');">
+                        <form action="/tasks/routine/<%= r.id %>/delete" method="POST" style="display:inline;" data-confirm="Delete this routine schedule?">
                             <button class="btn btn-sm danger-btn" title="Delete Routine">
                                 <i class="fa-solid fa-trash"></i> Delete
                             </button>

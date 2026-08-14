@@ -167,7 +167,7 @@ html body .note-title-field:focus,
             </a>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-            <form action="/notes/<%= note.id %>/delete" method="post" style="margin:0;" onsubmit="return confirm('Delete this note permanently?')">
+            <form action="/notes/<%= note.id %>/delete" method="post" style="margin:0;" data-confirm="Delete this note permanently?">
                 <button type="submit" class="btn btn-sm" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; font-size:12px; font-weight:700; border-radius:8px; padding:6px 12px;">
                     <i class="fa-solid fa-trash-can"></i> Delete Note
                 </button>

@@ -493,3 +493,121 @@ window.removeAssigneeChip = function(btnEl) {
     if (chip) chip.remove();
 };
 
+// Global Custom Confirmation Modal Helper
+window.showConfirmDialog = function(options = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('global-confirm-modal');
+        if (!modal) {
+            resolve(window.confirm ? window.confirm(options.message || 'Are you sure?') : true);
+            return;
+        }
+
+        const titleEl = document.getElementById('confirm-modal-title');
+        const msgEl = document.getElementById('confirm-modal-message');
+        const okBtn = document.getElementById('confirm-modal-ok-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const iconDiv = document.getElementById('confirm-modal-icon');
+        const iconI = document.getElementById('confirm-modal-icon-i');
+
+        if (titleEl) titleEl.textContent = options.title || 'Confirm Action';
+        if (msgEl) msgEl.textContent = options.message || 'Are you sure you want to proceed?';
+
+        if (okBtn) {
+            okBtn.textContent = options.confirmText || (options.danger !== false ? 'Yes, Delete' : 'Confirm');
+            if (options.danger !== false) {
+                okBtn.className = 'btn btn-confirm-danger';
+            } else {
+                okBtn.className = 'btn primary';
+            }
+        }
+
+        if (cancelBtn) {
+            cancelBtn.textContent = options.cancelText || 'Cancel';
+        }
+
+        if (iconDiv && iconI) {
+            if (options.danger !== false) {
+                iconDiv.className = 'confirm-modal-icon danger';
+                iconI.className = 'fa-solid fa-trash-can';
+            } else {
+                iconDiv.className = 'confirm-modal-icon warning';
+                iconI.className = 'fa-solid fa-triangle-exclamation';
+            }
+        }
+
+        modal.classList.add('open');
+        modal.classList.add('active');
+
+        function cleanup(result) {
+            modal.classList.remove('open');
+            modal.classList.remove('active');
+            if (okBtn) okBtn.removeEventListener('click', onOk);
+            if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+            const closeBtn = modal.querySelector('.modal-close');
+            if (closeBtn) closeBtn.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKey);
+            resolve(result);
+        }
+
+        function onOk(e) {
+            e.preventDefault();
+            cleanup(true);
+        }
+
+        function onCancel(e) {
+            e.preventDefault();
+            cleanup(false);
+        }
+
+        function onKey(e) {
+            if (e.key === 'Escape') {
+                cleanup(false);
+            }
+        }
+
+        if (okBtn) okBtn.addEventListener('click', onOk);
+        if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) closeBtn.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKey);
+    });
+};
+
+// Global Form Submit Interceptor to show custom in-app confirmation modal instead of browser alert/confirm
+document.addEventListener('submit', async function(e) {
+    const form = e.target;
+    if (form.dataset.confirmed === 'true') return;
+
+    let confirmMsg = form.dataset.confirm;
+    if (!confirmMsg && form.getAttribute('onsubmit')) {
+        const match = form.getAttribute('onsubmit').match(/confirm\(['"](.*?)['"]\)/);
+        if (match && match[1]) {
+            confirmMsg = match[1];
+        }
+    }
+
+    if (confirmMsg) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isDelete = form.action.includes('delete') || form.classList.contains('delete-form') || confirmMsg.toLowerCase().includes('delete');
+
+        const confirmed = await window.showConfirmDialog({
+            title: isDelete ? 'Confirm Action' : 'Please Confirm',
+            message: confirmMsg,
+            confirmText: isDelete ? 'Yes, Delete' : 'Confirm',
+            danger: isDelete
+        });
+
+        if (confirmed) {
+            form.dataset.confirmed = 'true';
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }
+    }
+}, true);
+
+

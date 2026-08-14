@@ -32,12 +32,12 @@
                 </button>
             <% } %>
 
-            <% const canEditOrDelete = user.role !== 'admin' && (Number(task.created_by) === Number(user.id) || Number(task.manager_id) === Number(user.id)); %>
+            <% const canEditOrDelete = user.role !== 'admin' && (Number(task.created_by) === Number(user.id) || Number(task.manager_id) === Number(user.id) || assignedIds.includes(String(user.id))); %>
             <% if (canEditOrDelete) { %>
                 <button type="button" class="task-action-pill edit-pill" data-open="edit-task-modal">
                     <i class="fa-solid fa-pen"></i> Edit Task
                 </button>
-                <form action="/tasks/<%= task.id %>/delete" method="post" onsubmit="return confirm('Delete this task? Assigned user will be notified.')" style="margin:0;display:inline-flex;">
+                <form action="/tasks/<%= task.id %>/delete" method="post" data-confirm="Delete this task? Assigned user will be notified." style="margin:0;display:inline-flex;">
                     <button type="submit" class="task-action-pill delete-pill">
                         <i class="fa-solid fa-trash"></i> Delete
                     </button>
