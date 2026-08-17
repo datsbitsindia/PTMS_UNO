@@ -752,14 +752,14 @@ body.dark .user-pill {
 }
 .task-desc-box small {
     display: block;
-    font-size: 9px;
+    font-size: 10px;
     color: #6b7280;
     text-transform: uppercase;
     font-weight: 700;
 }
 .task-desc-box p {
     margin: 3px 0 0;
-    font-size: 12px;
+    font-size: 13px;
     color: #1f2937;
     line-height: 1.35;
 }
