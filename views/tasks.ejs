@@ -195,12 +195,12 @@
         </select>
 
         <select>
-            <option>All Status</option>
-            <option>Pending</option>
-            <option>In Progress</option>
-            <option>Completed</option>
-            <option>Overdue</option>
-            <option value="forwarded">↪️ Forwarded Tasks</option>
+            <option <%= (typeof filters !== 'undefined' && filters.status === 'all') ? 'selected' : '' %>>All Status</option>
+            <option <%= (typeof filters === 'undefined' || !filters.status || filters.status === 'Pending' || filters.status === 'pending') ? 'selected' : '' %>>Pending</option>
+            <option <%= (typeof filters !== 'undefined' && (filters.status === 'In Progress' || filters.status === 'in-progress')) ? 'selected' : '' %>>In Progress</option>
+            <option <%= (typeof filters !== 'undefined' && (filters.status === 'Completed' || filters.status === 'completed')) ? 'selected' : '' %>>Completed</option>
+            <option <%= (typeof filters !== 'undefined' && (filters.status === 'Overdue' || filters.status === 'overdue')) ? 'selected' : '' %>>Overdue</option>
+            <option value="forwarded" <%= (typeof filters !== 'undefined' && filters.status === 'forwarded') ? 'selected' : '' %>>↪️ Forwarded Tasks</option>
         </select>
 
         <button type="button" class="filter-confirm">
@@ -278,10 +278,8 @@
 
                     </div>
 
-                    <small style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
+                    <small style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; font-size: 13px; color: #000000; font-weight: 500;">
                         <%= t.project_name || 'No project' %>
-                        ·
-                        <%= (t.description || '').replace(/<[^>]*>?/gm, '').trim() || 'Task details' %>
                     </small>
 
                 </div>
@@ -331,6 +329,16 @@ window.filterTaskType = function(type, btn) {
         window.applyCompactFilter(bar);
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const params = new URLSearchParams(window.location.search);
+        const statusParam = params.get('status');
+        if (window.filterByKpi) {
+            window.filterByKpi(statusParam || 'Pending');
+        }
+    }, 50);
+});
 </script>
 
 

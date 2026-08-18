@@ -501,7 +501,9 @@ document.addEventListener('click', event => {
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const statusParam = params.get('status');
-    if (statusParam) {
+    if (window.location.pathname === '/tasks' || window.location.pathname === '/tasks/') {
+        window.filterByKpi(statusParam || 'Pending');
+    } else if (statusParam) {
         window.filterByKpi(statusParam);
     } else {
         const defaultCard = document.querySelector('.metric-card[onclick*="all"], .metric-card[title*="all"]');
