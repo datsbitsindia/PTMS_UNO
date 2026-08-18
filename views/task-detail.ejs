@@ -32,7 +32,8 @@
                 </button>
             <% } %>
 
-            <% const canEditOrDelete = user.role !== 'admin' && (Number(task.created_by) === Number(user.id) || Number(task.manager_id) === Number(user.id) || assignedIds.includes(String(user.id))); %>
+            <% const mgrIdsArr = String(task.manager_id || '').split(',').map(x => x.trim()); %>
+            <% const canEditOrDelete = user.role !== 'admin' && (Number(task.created_by) === Number(user.id) || mgrIdsArr.includes(String(user.id)) || assignedIds.includes(String(user.id))); %>
             <% if (canEditOrDelete) { %>
                 <button type="button" class="task-action-pill edit-pill" data-open="edit-task-modal">
                     <i class="fa-solid fa-pen"></i> Edit Task
