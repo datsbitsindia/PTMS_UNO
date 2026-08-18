@@ -330,41 +330,28 @@ window.initCKEditor = function(elementOrSelector) {
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             });
 
-            // Strip Excel/Word MSO inline styles & <style> blocks on paste
-            const editableEl = editor.editing.view.getDomRoot();
-            editableEl.addEventListener('paste', (evt) => {
-                const clipData = evt.clipboardData;
-                if (!clipData) return;
-                const html = clipData.getData('text/html');
-                if (!html) return;
-
-                // Only sanitize if it looks like Office/Excel content
-                if (!html.includes('mso-') && !html.includes('<style') && !html.includes('<o:')) return;
-
-                evt.preventDefault();
-                evt.stopPropagation();
-
-                let clean = html;
-                // Remove <style>...</style> blocks
-                clean = clean.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-                // Remove all inline style="" attributes
-                clean = clean.replace(/\s+style\s*=\s*"[^"]*"/gi, '');
-                clean = clean.replace(/\s+style\s*=\s*'[^']*'/gi, '');
-                // Remove class="" attributes
-                clean = clean.replace(/\s+class\s*=\s*"[^"]*"/gi, '');
-                clean = clean.replace(/\s+class\s*=\s*'[^']*'/gi, '');
-                // Remove Office XML tags like <o:p>, <w:WordDocument>, <m:math>
-                clean = clean.replace(/<\/?[owm]:[^>]*>/gi, '');
-                // Remove Office conditional comments <!--[if ...]>...</[endif]-->
-                clean = clean.replace(/<!--\[if[\s\S]*?\[endif\]-->/gi, '');
-                // Remove empty tags left behind
-                clean = clean.replace(/<[a-zA-Z][^>]*>\s*<\/[a-zA-Z]+>/g, '');
-
-                // Insert the cleaned HTML into CKEditor
-                const viewFragment = editor.data.htmlProcessor.toView(clean);
-                const modelFragment = editor.data.toModel(viewFragment);
-                editor.model.insertContent(modelFragment);
-            }, true);
+            try {
+                const clipboardPipeline = editor.plugins.get('ClipboardPipeline');
+                if (clipboardPipeline) {
+                    clipboardPipeline.on('inputTransformation', (evt, data) => {
+                        if (data.dataTransfer && data.dataTransfer.getData('text/html')) {
+                            let html = data.dataTransfer.getData('text/html');
+                            if (html.includes('mso-') || html.includes('<style') || html.includes('<o:')) {
+                                html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+                                html = html.replace(/\s+style\s*=\s*"[^"]*"/gi, '');
+                                html = html.replace(/\s+style\s*=\s*'[^']*'/gi, '');
+                                html = html.replace(/\s+class\s*=\s*"[^"]*"/gi, '');
+                                html = html.replace(/\s+class\s*=\s*'[^']*'/gi, '');
+                                html = html.replace(/<\/?[owm]:[^>]*>/gi, '');
+                                html = html.replace(/<!--\[if[\s\S]*?\[endif\]-->/gi, '');
+                                try {
+                                    data.content = editor.data.parse(html);
+                                } catch(e) {}
+                            }
+                        }
+                    }, { priority: 'high' });
+                }
+            } catch(e) {}
 
             el._ckeditor = editor;
             return editor;

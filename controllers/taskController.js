@@ -49,9 +49,9 @@ const baseQuery = `
 
 const canView = async (u, t) => {
     if (u.role === 'admin') return true;
-    if (t.created_by === u.id) return true;
-    if (u.role === 'manager' && t.manager_id === u.id) return true;
-    const assignedArr = String(t.assigned_to || '').split(',');
+    if (String(t.created_by) === String(u.id)) return true;
+    if (u.role === 'manager' && t.manager_id && String(t.manager_id).split(',').map(x => x.trim()).includes(String(u.id))) return true;
+    const assignedArr = String(t.assigned_to || '').split(',').map(x => x.trim());
     if (assignedArr.includes(String(u.id))) return true;
     const isAssignee = await db.prepare('SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?').get(t.id, u.id);
     if (isAssignee) return true;
