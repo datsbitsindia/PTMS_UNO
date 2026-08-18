@@ -654,7 +654,8 @@ html body .task-title-group h2 {
 }
 
 html body .project-tag {
-    font-size: 10px !important;
+    font-size: 13px !important;
+    color: #000000 !important;
     margin-top: 1px !important;
 }
 
@@ -665,7 +666,8 @@ html body .task-desc-box {
 }
 
 html body .task-desc-box small {
-    font-size: 10px !important;
+    font-size: 13px !important;
+    color: #000000 !important;
     margin-bottom: 1px !important;
 }
 
