@@ -49,12 +49,9 @@ const baseQuery = `
 
 const canView = async (u, t) => {
     if (u.role === 'admin') return true;
-    if (Number(t.created_by) === Number(u.id)) return true;
-    if (u.role === 'manager') {
-        const mgrIds = String(t.manager_id || '').split(',').map(x => x.trim());
-        if (mgrIds.includes(String(u.id))) return true;
-    }
-    const assignedArr = String(t.assigned_to || '').split(',').map(x => x.trim());
+    if (t.created_by === u.id) return true;
+    if (u.role === 'manager' && t.manager_id === u.id) return true;
+    const assignedArr = String(t.assigned_to || '').split(',');
     if (assignedArr.includes(String(u.id))) return true;
     const isAssignee = await db.prepare('SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?').get(t.id, u.id);
     if (isAssignee) return true;
@@ -166,7 +163,7 @@ exports.detail = async (req, res) => {
     const attachments = await db.prepare('SELECT * FROM attachments WHERE task_id=? ORDER BY created_at DESC').all(task.id);
     const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
     const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
-    const projects = req.session.user.role === 'admin' ? await db.prepare("SELECT id,name FROM projects ORDER BY name").all() : await db.prepare("SELECT id,name FROM projects WHERE FIND_IN_SET(?, manager_id) > 0 ORDER BY name").all(req.session.user.id);
+    const projects = req.session.user.role === 'admin' ? await db.prepare("SELECT id,name FROM projects ORDER BY name").all() : await db.prepare("SELECT id,name FROM projects WHERE manager_id=? ORDER BY name").all(req.session.user.id);
     const forwardLogs = await db.prepare(`
         SELECT f.*, ufrom.name as from_name, uto.name as to_name
         FROM task_forward_logs f
