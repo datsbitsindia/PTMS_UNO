@@ -497,9 +497,14 @@ body.dark .user-pill {
 .project-tag {
     display: inline-block;
     font-size: 13px;
-    color: #000000;
+    color: #3b68b7;
     font-weight: 600;
     margin-top: 2px;
+}
+.task-title-group .project-tag {
+    font-size: 13px;
+    color: #3b68b7;
+    font-weight: 600;
 }
 .priority-badge {
     padding: 5px 12px;
