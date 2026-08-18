@@ -3,9 +3,10 @@ const { db } = require('../database/init');
 async function notify(userId, message, link='', createdBy=null) {
     if (!userId) return;
     const targetIds = String(userId).split(',').map(x => Number(x.trim())).filter(Boolean);
+    const validCreatedBy = (createdBy && Number(createdBy)) ? Number(createdBy) : null;
     for (const uid of targetIds) {
         try {
-            await db.prepare('INSERT INTO notifications(user_id,message,link,created_by) VALUES(?,?,?,?)').run(uid, message, link, createdBy);
+            await db.prepare('INSERT INTO notifications(user_id,message,link,created_by) VALUES(?,?,?,?)').run(uid, message, link, validCreatedBy);
         } catch(e) {
             console.error('Notification insert error:', e);
         }
@@ -15,10 +16,11 @@ async function notify(userId, message, link='', createdBy=null) {
 async function notifyOnce(userId, message, link='', createdBy=null) {
     if (!userId) return;
     const targetIds = String(userId).split(',').map(x => Number(x.trim())).filter(Boolean);
+    const validCreatedBy = (createdBy && Number(createdBy)) ? Number(createdBy) : null;
     for (const uid of targetIds) {
         try {
             const exists = await db.prepare('SELECT id FROM notifications WHERE user_id=? AND message=? AND link=? LIMIT 1').get(uid, message, link);
-            if (!exists) await notify(uid, message, link, createdBy);
+            if (!exists) await notify(uid, message, link, validCreatedBy);
         } catch(e) {
             console.error('Notification once error:', e);
         }

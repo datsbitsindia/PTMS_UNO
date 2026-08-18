@@ -11,21 +11,21 @@ const baseQuery = `
     SELECT DISTINCT t.*,
         COALESCE(
             (SELECT name FROM priorities WHERE id = t.priority_id LIMIT 1),
-            (SELECT name FROM priorities WHERE normalized_name = LOWER(t.priority) LIMIT 1),
+            (SELECT name FROM priorities WHERE normalized_name = LOWER(t.priority) COLLATE utf8mb4_unicode_ci LIMIT 1),
             t.priority, 'Medium'
         ) AS priority,
         COALESCE(
             (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
-            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) LIMIT 1),
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) COLLATE utf8mb4_unicode_ci LIMIT 1),
             (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
-            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(t.status AS CHAR)) LIMIT 1),
-            CAST(t.status AS CHAR), 'Pending'
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(t.status AS CHAR)) COLLATE utf8mb4_unicode_ci LIMIT 1),
+            CAST(t.status AS CHAR) COLLATE utf8mb4_unicode_ci, 'Pending'
         ) AS status,
         COALESCE(
             (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
-            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) LIMIT 1),
+            (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta_sub.status AS CHAR)) COLLATE utf8mb4_unicode_ci LIMIT 1),
             (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
-            CAST(t.status AS CHAR), 'Pending'
+            CAST(t.status AS CHAR) COLLATE utf8mb4_unicode_ci, 'Pending'
         ) AS user_status,
         COALESCE(ta_sub.completed_at, t.completed_at) AS completed_at,
         COALESCE(
@@ -37,8 +37,8 @@ const baseQuery = `
         CASE WHEN t.due_date<CURDATE() AND COALESCE(
             (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
             (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),
-            CAST(t.status AS CHAR), ''
-        ) NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue
+            CAST(t.status AS CHAR) COLLATE utf8mb4_unicode_ci, '' COLLATE utf8mb4_unicode_ci
+        ) NOT IN ('Completed' COLLATE utf8mb4_unicode_ci,'Cancelled' COLLATE utf8mb4_unicode_ci) THEN 1 ELSE 0 END is_overdue
     FROM tasks t
     LEFT JOIN task_assignees ta_sub ON ta_sub.task_id=t.id AND ta_sub.user_id=?
     LEFT JOIN users a ON a.id=t.assigned_to
@@ -64,7 +64,7 @@ exports.list = async (req, res) => {
     const u = req.session.user;
     
     // Auto sync daily routine tasks for today
-    await routineService.syncDailyRoutines();
+    routineService.syncDailyRoutines().catch(e => console.error('syncDailyRoutines bg error:', e));
 
     let baseFilter = '1=1';
     let params = [u.id];
@@ -92,7 +92,7 @@ exports.list = async (req, res) => {
         if (req.query[key]) {
             const val = req.query[key].trim();
             if (field === 'status' && val.toLowerCase() === 'pending') {
-                filters.push("LOWER(COALESCE(ta.status, t.status)) IN ('pending', 'planned')");
+                filters.push("LOWER(COALESCE(ta_sub.status, t.status)) IN ('pending', 'planned')");
             } else if (field === 'assigned_to') {
                 filters.push("FIND_IN_SET(?, t.assigned_to) > 0");
                 params.push(val.toLowerCase());
@@ -178,13 +178,13 @@ exports.detail = async (req, res) => {
             u.name, u.role, u.designation,
             COALESCE(
                 (SELECT name FROM statuses WHERE id = ta.status_id LIMIT 1),
-                (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta.status AS CHAR)) LIMIT 1),
-                CASE CAST(ta.status AS CHAR)
-                    WHEN '0' THEN 'Pending'
-                    WHEN '1' THEN 'In Progress'
-                    WHEN '2' THEN 'Completed'
-                    WHEN '3' THEN 'Cancelled'
-                    ELSE COALESCE(CAST(ta.status AS CHAR), 'Pending')
+                (SELECT name FROM statuses WHERE normalized_name = LOWER(CAST(ta.status AS CHAR) COLLATE utf8mb4_unicode_ci) LIMIT 1),
+                CASE CAST(ta.status AS CHAR) COLLATE utf8mb4_unicode_ci
+                    WHEN 'Pending' THEN 'Pending'
+                    WHEN 'In Progress' THEN 'In Progress'
+                    WHEN 'Completed' THEN 'Completed'
+                    WHEN 'Cancelled' THEN 'Cancelled'
+                    ELSE CAST(ta.status AS CHAR) COLLATE utf8mb4_unicode_ci
                 END
             ) AS status
         FROM task_assignees ta

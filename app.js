@@ -55,7 +55,7 @@ async function start() {
     const sessionOptions = {
         ...config.mysql,
         schema: {
-            tableName: (config.tablePrefix || 'dataevol_') + 'sessions',
+            tableName: (config.tablePrefix || 'uno_') + 'sessions',
             columnNames: {
                 session_id: 'session_id',
                 expires: 'expires',
