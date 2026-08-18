@@ -516,8 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusParam = params.get('status');
     if (statusParam) {
         window.filterByKpi(statusParam);
-    } else if (window.location.pathname === '/tasks' || window.location.pathname === '/tasks/') {
-        window.filterByKpi('Pending');
     } else {
         const defaultCard = document.querySelector('.metric-card[onclick*="all"], .metric-card[title*="all"]');
         if (defaultCard && document.querySelector('.compact-filter')) {
