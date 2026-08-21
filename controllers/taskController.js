@@ -188,6 +188,13 @@ exports.detail = async (req, res) => {
         WHERE ta.task_id=?
     `).all(task.id);
 
+    // Auto mark notifications for this task as read when user opens the task
+    try {
+        await db.prepare(
+            'UPDATE notifications SET is_read=1 WHERE user_id=? AND (link=? OR link=?) AND is_read=0'
+        ).run(req.session.user.id, `/tasks/${req.params.id}`, `/tasks/${req.params.id}?success=status`);
+    } catch(e) {}
+
     res.render('task-detail', {
         task,
         comments,
@@ -526,7 +533,10 @@ exports.status = async (req, res) => {
     }
 
     try { await activity.log(req.session.user.id, newStatus === 'Completed' ? 'Task Completed' : 'Task Updated', task.title); } catch(e) {}
-    try { await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`); } catch(e) {}
+    // Notify creator (only if commenter is not the creator themselves)
+    if (Number(task.created_by) !== Number(req.session.user.id)) {
+        try { await notifications.notify(task.created_by, `${req.session.user.name} changed status of ${task.title} to ${newStatus}`, `/tasks/${task.id}`); } catch(e) {}
+    }
 
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
         return res.json({
@@ -547,7 +557,16 @@ exports.comment = async (req, res) => {
     });
     const result = await db.prepare('INSERT INTO comments(task_id,user_id,message) VALUES(?,?,?)').run(task.id, req.session.user.id, message);
     await activity.log(req.session.user.id, 'Comment Added', task.title);
-    await notifications.notify(req.session.user.id === task.assigned_to ? task.created_by : task.assigned_to, `New comment on: ${task.title}`, `/tasks/${task.id}`);
+    // Notify everyone on the task (creator + all assignees) except the person who commented
+    const commenterId = Number(req.session.user.id);
+    const notifyIds = new Set();
+    if (Number(task.created_by) !== commenterId) notifyIds.add(Number(task.created_by));
+    String(task.assigned_to || '').split(',').map(x => Number(x.trim())).filter(Boolean).forEach(uid => {
+        if (uid !== commenterId) notifyIds.add(uid);
+    });
+    if (notifyIds.size > 0) {
+        await notifications.notify([...notifyIds].join(','), `New comment on: ${task.title}`, `/tasks/${task.id}`);
+    }
 
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
         return res.json({

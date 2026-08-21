@@ -171,10 +171,10 @@
 <section class="ui-panel">
 
     <div class="task-type-tabs-container" style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; margin-bottom: 12px !important;">
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)" style="height: 36px !important; padding: 0 6px !important; font-size: 13px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important;">
+        <button type="button" class="btn task-tab-btn active" data-task-tab="assigned-to-me" onclick="filterTaskType('assigned-to-me', this)">
             <i class="fa-solid fa-inbox"></i> To Do
         </button>
-        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)" style="height: 36px !important; padding: 0 6px !important; font-size: 13px !important; font-weight: 700 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; background: #fefce8 !important; color: #a16207 !important; border: 1px solid #fef08a !important;">
+        <button type="button" class="btn task-tab-btn" data-task-tab="assigned-by-me" onclick="filterTaskType('assigned-by-me', this)">
             <i class="fa-solid fa-paper-plane"></i> Assigned
         </button>
     </div>
@@ -185,28 +185,15 @@
         <input
             type="search"
             placeholder="Search tasks..."
+            oninput="applyCompactFilter(this.closest('.compact-filter'))"
         >
 
-        <select>
+        <select onchange="applyCompactFilter(this.closest('.compact-filter'))">
             <option>All Projects</option>
             <% projects.forEach(p => { %>
                 <option><%= p.name %></option>
             <% }) %>
         </select>
-
-        <select>
-            <option <%= (typeof filters !== 'undefined' && filters.status === 'all') ? 'selected' : '' %>>All Status</option>
-            <option <%= (typeof filters === 'undefined' || !filters.status || filters.status === 'Pending' || filters.status === 'pending') ? 'selected' : '' %>>Pending</option>
-            <option <%= (typeof filters !== 'undefined' && (filters.status === 'In Progress' || filters.status === 'in-progress')) ? 'selected' : '' %>>In Progress</option>
-            <option <%= (typeof filters !== 'undefined' && (filters.status === 'Completed' || filters.status === 'completed')) ? 'selected' : '' %>>Completed</option>
-            <option <%= (typeof filters !== 'undefined' && (filters.status === 'Overdue' || filters.status === 'overdue')) ? 'selected' : '' %>>Overdue</option>
-            <option value="forwarded" <%= (typeof filters !== 'undefined' && filters.status === 'forwarded') ? 'selected' : '' %>>↪️ Forwarded Tasks</option>
-        </select>
-
-        <button type="button" class="filter-confirm">
-            <i class="fa-solid fa-check"></i>
-            Confirm
-        </button>
     </div>
 
     <div class="entity-list">
@@ -241,15 +228,7 @@
                             <span class="routine-badge" style="flex:0 0 auto; margin:0!important;"><i class="fa-solid fa-repeat"></i> Routine</span>
                         <% } %>
 
-                        <% if (isAssignedByMe) { %>
-                            <span class="status-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:2px 6px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;margin:0!important;">
-                                <i class="fa-solid fa-paper-plane"></i> Assigned
-                            </span>
-                        <% } else if (isAssignedToMe && !isPureSelf) { %>
-                            <span class="status-chip" style="background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;padding:2px 6px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;margin:0!important;">
-                                <i class="fa-solid fa-inbox"></i> To Do
-                            </span>
-                        <% } else if (isPureSelf) { %>
+                        <% if (isPureSelf) { %>
                             <span class="status-chip self-task" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:2px 6px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;margin:0!important;">
                                 <i class="fa-solid fa-user-check"></i> Self Task
                             </span>

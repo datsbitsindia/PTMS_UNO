@@ -37,11 +37,9 @@
             </a>
         <% } %>
 
-        <a href="/notifications" class="<%= page === 'notifications' ? 'active' : '' %>">
+        <a href="/notifications" class="<%= page === 'notifications' ? 'active' : '' %>" style="position:relative;">
             <i class="fa-solid fa-bell"></i>Notifications
-            <% if (unread) { %>
-                <b class="badge"><%= unread %></b>
-            <% } %>
+            <b class="badge" style="<%= (typeof unread !== 'undefined' && unread > 0) ? 'display:inline-block;' : 'display:none;' %>"><%= (typeof unread !== 'undefined' && unread > 0) ? unread : '' %></b>
         </a>
 
         <a href="/notes" class="<%= page === 'notes' ? 'active' : '' %>">

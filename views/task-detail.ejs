@@ -68,7 +68,7 @@
                     <div style="display:inline-flex; align-items:center; gap:6px; background:#ffffff; border:1px solid #cbd5e1; padding:6px 12px; border-radius:99px; font-size:12px; font-weight:600;">
                         <i class="fa-solid <%= a.role === 'manager' ? 'fa-user-tie' : 'fa-user' %>" style="color:#6366f1;"></i>
                         <span><%= a.name %></span>
-                        <span class="status-chip <%= a.status.toLowerCase().replaceAll(' ','-') %>" style="font-size:10px; padding:2px 8px;"><%= a.status %></span>
+                        <span class="status-chip assignee-chip-user-<%= a.user_id %> <%= a.status.toLowerCase().replaceAll(' ','-') %>" data-user-id="<%= a.user_id %>" style="font-size:10px; padding:2px 8px;"><%= a.status %></span>
                     </div>
                 <% }) %>
             </div>
@@ -136,7 +136,7 @@
     </div>
     <div class="chat-messages-container" id="chat-messages-box">
         <% comments.forEach(c => { %>
-            <div class="chat-bubble <%= c.user_id === user.id ? 'outgoing' : 'incoming' %>">
+            <div class="chat-bubble <%= c.user_id === user.id ? 'outgoing' : 'incoming' %>" data-comment-id="<%= c.id %>">
                 <% if(c.user_id !== user.id){ %>
                     <span class="sender-name"><%= c.name %></span>
                 <% } %>

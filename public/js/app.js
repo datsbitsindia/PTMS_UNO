@@ -264,7 +264,35 @@ window.applyCompactFilter = function(bar) {
     empty.hidden = (visible !== 0);
 };
 
-document.addEventListener('click',event=>{const btn=event.target.closest('.filter-confirm');if(btn){const bar=btn.closest('.compact-filter');if(bar)window.applyCompactFilter(bar)}});document.addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target.matches('.compact-filter input')){event.preventDefault();const bar=event.target.closest('.compact-filter');if(bar)window.applyCompactFilter(bar)}});
+document.addEventListener('input', event => {
+    if (event.target.matches('.compact-filter input')) {
+        const bar = event.target.closest('.compact-filter');
+        if (bar) window.applyCompactFilter(bar);
+    }
+});
+
+document.addEventListener('change', event => {
+    if (event.target.matches('.compact-filter select')) {
+        const bar = event.target.closest('.compact-filter');
+        if (bar) window.applyCompactFilter(bar);
+    }
+});
+
+document.addEventListener('click', event => {
+    const btn = event.target.closest('.filter-confirm');
+    if (btn) {
+        const bar = btn.closest('.compact-filter');
+        if (bar) window.applyCompactFilter(bar);
+    }
+});
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && event.target.matches('.compact-filter input')) {
+        event.preventDefault();
+        const bar = event.target.closest('.compact-filter');
+        if (bar) window.applyCompactFilter(bar);
+    }
+});
 
 document.querySelectorAll('.edit-employee').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.employee),f=document.getElementById('employee-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('employee-title');if(t)t.textContent='Edit Team Member';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('employee-modal').classList.add('open')}});
 document.querySelectorAll('.edit-manager').forEach(b=>b.onclick=()=>{const d=JSON.parse(b.dataset.manager),f=document.getElementById('manager-form');if(f){Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]||''});const t=document.getElementById('manager-title');if(t)t.textContent='Edit Manager';const n=document.getElementById('pwd-note');if(n)n.textContent='Leave empty to keep existing password';document.getElementById('manager-modal').classList.add('open')}});
@@ -436,9 +464,6 @@ window.filterByKpi = function(filterVal, event) {
                 }
             });
         });
-        if (!matched && searchInput) {
-            searchInput.value = filterVal;
-        }
 
         if (!targetCard) {
             document.querySelectorAll('.metric-card').forEach(card => {
@@ -635,5 +660,230 @@ document.addEventListener('submit', async function(e) {
         }
     }
 }, true);
+
+// Real-Time Background Live Sync Engine
+(function initLiveSync() {
+    let lastTaskId = 0;
+    let lastNotifId = 0;
+    let activeTaskId = 0;
+    let lastCommentId = 0;
+    let isInitialSync = true;
+
+    const taskMatch = window.location.pathname.match(/\/tasks\/(\d+)/);
+    if (taskMatch && taskMatch[1]) {
+        activeTaskId = Number(taskMatch[1]);
+        const commentBubbles = document.querySelectorAll('.chat-bubble[data-comment-id]');
+        commentBubbles.forEach(b => {
+            const cid = Number(b.dataset.commentId);
+            if (cid > lastCommentId) lastCommentId = cid;
+        });
+    }
+
+    // Track highest existing task ID on the current page
+    const existingCards = document.querySelectorAll('.entity-card.task-card');
+    existingCards.forEach(card => {
+        const link = card.querySelector('a[href^="/tasks/"]');
+        if (link) {
+            const match = link.href.match(/\/tasks\/(\d+)/);
+            if (match && match[1]) {
+                const tid = Number(match[1]);
+                if (tid > lastTaskId) lastTaskId = tid;
+            }
+        }
+    });
+
+    async function pollUpdates() {
+        try {
+            const res = await fetch(`/api/live-check?last_task_id=${lastTaskId}&last_notif_id=${lastNotifId}&active_task_id=${activeTaskId}&last_comment_id=${lastCommentId}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success) return;
+
+            // ─── Initial baseline sync: set IDs and return, never mutate DOM ───
+            if (isInitialSync) {
+                isInitialSync = false;
+                lastTaskId = data.maxTaskId || lastTaskId;
+                lastNotifId = data.maxNotifId || lastNotifId;
+                return;
+            }
+
+            // 1. Update Notification Bell Badge (Desktop & Mobile)
+            const badges = document.querySelectorAll('a[href="/notifications"] .badge');
+            badges.forEach(badge => {
+                if (data.unreadCount > 0) {
+                    badge.textContent = data.unreadCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                    badge.textContent = '';
+                }
+            });
+
+            // 2. Task Detail Status Live Update
+            if (data.activeTaskData) {
+                const overallChip = document.querySelector('.task-info-grid .status-chip');
+                if (overallChip && data.activeTaskData.status) {
+                    const newStatusStr = data.activeTaskData.status;
+                    if (overallChip.textContent.trim() !== newStatusStr) {
+                        overallChip.textContent = newStatusStr;
+                        overallChip.className = 'status-chip ' + newStatusStr.toLowerCase().replaceAll(' ', '-');
+                    }
+                }
+
+                if (data.activeTaskData.assignees && data.activeTaskData.assignees.length) {
+                    data.activeTaskData.assignees.forEach(a => {
+                        // Only update OTHER users' status chips, skip current user's own chip
+                        if (Number(a.user_id) === Number(window.currentUserId || 0)) return;
+                        const assigneeChip = document.querySelector(`.assignee-chip-user-${a.user_id}`);
+                        if (assigneeChip && a.status) {
+                            if (assigneeChip.textContent.trim() !== a.status) {
+                                assigneeChip.textContent = a.status;
+                                assigneeChip.className = `status-chip assignee-chip-user-${a.user_id} ` + a.status.toLowerCase().replaceAll(' ', '-');
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 3. Task Detail Discussion Comments Live Append
+            if (data.newComments && data.newComments.length > 0) {
+                const chatBox = document.getElementById('chat-messages-box');
+                if (chatBox) {
+                    data.newComments.forEach(c => {
+                        if (chatBox.querySelector(`[data-comment-id="${c.id}"]`)) return;
+
+                        const isOutgoing = Number(c.user_id) === Number(window.currentUserId || 0);
+                        const bubble = document.createElement('div');
+                        bubble.className = `chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
+                        bubble.dataset.commentId = c.id;
+
+                        const d = new Date(c.created_at);
+                        const timeStr = isNaN(d.getTime()) ? c.created_at : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
+                        bubble.innerHTML = `
+                            ${!isOutgoing ? `<span class="sender-name">${c.name}</span>` : ''}
+                            <p class="message-text">${c.message}</p>
+                            <div class="message-meta">
+                                <time>${timeStr}</time>
+                                ${isOutgoing ? '<i class="fa-solid fa-check-double read-receipt"></i>' : ''}
+                            </div>
+                        `;
+
+                        chatBox.appendChild(bubble);
+                        if (c.id > lastCommentId) lastCommentId = c.id;
+                    });
+
+                    const emptyChat = chatBox.querySelector('.empty-chat');
+                    if (emptyChat) emptyChat.style.display = 'none';
+
+                    const badgeCount = document.querySelector('.whatsapp-chat-panel .badge-count');
+                    if (badgeCount) {
+                        const total = chatBox.querySelectorAll('.chat-bubble').length;
+                        badgeCount.textContent = `${total} updates`;
+                    }
+
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
+
+            // ─── Removed old isInitialSync block from here (moved to top) ───
+
+            // 4. Process New Notifications (Show Toast Alert)
+            if (data.newNotifications && data.newNotifications.length > 0) {
+                data.newNotifications.forEach(notif => {
+                    if (window.showToast) {
+                        window.showToast(`🔔 ${notif.message}`, 'info', 6000);
+                    }
+                });
+                lastNotifId = data.maxNotifId;
+            }
+
+            // 5. Process New Tasks (Auto-Prepend Task Card if on /tasks)
+            if (data.newTasks && data.newTasks.length > 0) {
+                const listContainer = document.querySelector('.entity-list');
+                if (listContainer) {
+                    data.newTasks.slice().reverse().forEach(t => {
+                        if (document.querySelector(`.task-card-item-${t.id}`)) return;
+
+                        const article = document.createElement('article');
+                        article.className = `entity-card task-card task-card-item-${t.id} ${t.is_overdue ? 'overdue-card' : ''} ${t.is_routine ? 'routine-task-card' : ''}`;
+                        article.dataset.status = String(t.status || 'pending').toLowerCase().replaceAll(' ', '-');
+                        article.dataset.overdue = t.is_overdue ? 'true' : 'false';
+                        article.dataset.forwarded = t.is_forwarded ? 'true' : 'false';
+                        article.dataset.project = (t.project_name || '').toLowerCase();
+                        article.dataset.filterGroup = t.filterGroup;
+                        article.dataset.cardLink = `/tasks/${t.id}`;
+                        article.style.animation = 'highlightTaskPulse 2.5s ease';
+                        article.style.cursor = 'pointer';
+
+                        const formatDateStr = (dStr) => {
+                            if (!dStr) return '';
+                            const d = new Date(dStr);
+                            if (isNaN(d.getTime())) return dStr;
+                            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        };
+
+                        article.innerHTML = `
+                            <div class="entity-title">
+                                <div class="task-title-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; width: 100%;">
+                                    <a href="/tasks/${t.id}" style="font-weight: 800; font-size: 14px; color: #0f172a; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 40px;">
+                                        ${t.title}
+                                    </a>
+                                    ${t.is_routine ? '<span class="routine-badge" style="flex:0 0 auto; margin:0!important;"><i class="fa-solid fa-repeat"></i> Routine</span>' : ''}
+                                    ${t.isPureSelf ? `
+                                        <span class="status-chip self-task" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:2px 6px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;margin:0!important;">
+                                            <i class="fa-solid fa-user-check"></i> Self Task
+                                        </span>
+                                    ` : ''}
+                                    <span class="priority-pill ${(t.priority || 'medium').toLowerCase()}" style="font-weight:700; font-size:9px; padding:2px 6px; border-radius:99px; flex:0 0 auto; margin:0!important;">
+                                        <i class="fa-solid fa-flag"></i> ${t.priority || 'Medium'}
+                                    </span>
+                                    ${t.is_forwarded ? `
+                                        <span class="status-chip forwarded" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:2px 6px;font-size:9px;font-weight:700;flex:0 0 auto;margin:0!important;">
+                                            <i class="fa-solid fa-share"></i> Forwarded
+                                        </span>
+                                    ` : ''}
+                                    <span class="status-chip ${t.is_overdue ? 'overdue' : String(t.status || 'Pending').toLowerCase().replaceAll(' ', '-')}" style="flex:0 0 auto; font-size:9px; padding:2px 6px; margin:0!important;">
+                                        ${t.is_overdue ? 'Overdue' : t.status}
+                                    </span>
+                                </div>
+                                <div class="task-meta-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; margin-top: 5px; color: #475569;">
+                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Assigned By</small><b>${t.creator_name}</b></div>
+                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Project</small><b>${t.project_name}</b></div>
+                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Created On</small><b>${formatDateStr(t.created_at)}</b></div>
+                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Due Date</small><b>${formatDateStr(t.due_date)}</b></div>
+                                </div>
+                            </div>
+                        `;
+
+                        article.addEventListener('click', event => {
+                            if (event.target.closest('a,button,input,select,form')) return;
+                            location.href = `/tasks/${t.id}`;
+                        });
+
+                        listContainer.prepend(article);
+                    });
+
+                    const emptyMsg = listContainer.querySelector('.filter-empty');
+                    if (emptyMsg) emptyMsg.style.display = 'none';
+
+                    const bar = document.querySelector('.compact-filter');
+                    if (bar && window.applyCompactFilter) {
+                        window.applyCompactFilter(bar);
+                    }
+                }
+
+                lastTaskId = data.maxTaskId;
+            }
+        } catch (err) {
+            // Background sync error silent catch
+        }
+    }
+
+    setInterval(pollUpdates, 3000);
+    setTimeout(pollUpdates, 1000);
+})();
 
 

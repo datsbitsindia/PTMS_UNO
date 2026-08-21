@@ -39,8 +39,8 @@
 .report-bars{display:grid;gap:15px}.report-bar-row{display:grid;grid-template-columns:120px 1fr 35px;align-items:center;gap:12px}.report-bar-row span{font-weight:700;color:var(--ui-ink)}
 .profile-shell{display:grid;gap:18px}.profile-shell .ui-panel{margin:0}.profile-shell .btn{width:100%;justify-content:center}.profile-shell .form-grid{align-items:end}}
 
-.compact-filter{display:flex!important;align-items:center;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}.compact-filter::-webkit-scrollbar{display:none}.compact-filter>*{flex:0 0 auto!important;width:auto!important;min-width:0!important}.compact-filter input{flex:1 1 100px!important;width:100px!important}.compact-filter select{width:94px!important;max-width:94px}.filter-confirm{height:34px;min-height:34px;padding:6px 9px;border:0;border-radius:9px;background:#3b68b7!important;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all 0.2s ease}.filter-confirm:hover{background:#2b579a!important}.filter-confirm i{margin-right:3px}
-@media(max-width:500px){.compact-filter{display:flex!important;padding:7px!important;gap:5px!important}.compact-filter input{width:82px!important;flex-basis:82px!important}.compact-filter select{width:80px!important;max-width:80px}.filter-confirm{padding:5px 7px;font-size:8px}}
+.compact-filter{display:flex!important;align-items:center;flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none}.compact-filter::-webkit-scrollbar{display:none}.compact-filter>*{flex:0 0 auto!important;min-width:0!important}.compact-filter input{flex:1 1 auto!important;min-width:100px!important}.compact-filter select{flex:0 0 auto!important;width:auto!important;max-width:140px!important}.filter-confirm{height:34px;min-height:34px;padding:6px 9px;border:0;border-radius:9px;background:#3b68b7!important;color:#fff;font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all 0.2s ease}.filter-confirm:hover{background:#2b579a!important}.filter-confirm i{margin-right:3px}
+@media(max-width:500px){.compact-filter{display:flex!important;padding:7px!important;gap:5px!important}.compact-filter input{flex:1 1 auto!important;min-width:90px!important}.compact-filter select{flex:0 0 auto!important;width:auto!important;max-width:125px!important}.filter-confirm{padding:5px 7px;font-size:8px}}
 
 .entity-card[hidden],.filter-empty[hidden]{display:none!important}
 html body .entity-card.task-card {
@@ -915,5 +915,95 @@ body.dark .user-pill {
         padding-right: 12px !important;
     }
 }
+
+/* Task Type Tabs (To Do vs Assigned) - Original Colors with Active Border Highlight */
+.task-tab-btn {
+    height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+/* To Do Tab Base (Original Light Blue) */
+.task-tab-btn[data-task-tab="assigned-to-me"] {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border: 1.5px solid #bfdbfe !important;
+    box-shadow: none !important;
+    opacity: 0.7 !important;
+}
+
+/* To Do Tab Active (Bold Border & Ring Shadow) */
+.task-tab-btn[data-task-tab="assigned-to-me"].active {
+    border: 2px solid #2563eb !important;
+    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.25), 0 3px 10px rgba(37, 99, 235, 0.15) !important;
+    opacity: 1 !important;
+    font-weight: 800 !important;
+}
+
+/* Assigned Tab Base (Original Light Yellow) */
+.task-tab-btn[data-task-tab="assigned-by-me"] {
+    background: #fefce8 !important;
+    color: #a16207 !important;
+    border: 1.5px solid #fef08a !important;
+    box-shadow: none !important;
+    opacity: 0.7 !important;
+}
+
+/* Assigned Tab Active (Bold Border & Ring Shadow) */
+.task-tab-btn[data-task-tab="assigned-by-me"].active {
+    border: 2px solid #d97706 !important;
+    box-shadow: 0 0 0 3.5px rgba(217, 119, 6, 0.25), 0 3px 10px rgba(217, 119, 6, 0.15) !important;
+    opacity: 1 !important;
+    font-weight: 800 !important;
+}
+
+/* Eye-Catching Red Notification Badge Dot Styling (Mobile & Desktop) */
+a[href="/notifications"] {
+    position: relative !important;
+}
+
+a[href="/notifications"] .badge {
+    position: absolute !important;
+    top: 3px !important;
+    right: 12px !important;
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border-radius: 99px !important;
+    padding: 0 5px !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    min-width: 17px !important;
+    height: 17px !important;
+    line-height: 17px !important;
+    text-align: center !important;
+    box-shadow: 0 0 0 2px #ffffff, 0 2px 6px rgba(220, 38, 38, 0.4) !important;
+    float: none !important;
+    z-index: 10 !important;
+}
+
+@media (max-width: 760px) {
+    a[href="/notifications"] .badge {
+        top: 2px !important;
+        right: 22% !important;
+    }
+}
+
+/* Task Animation Keyframes for Live Sync Auto Insertion */
+@keyframes highlightTaskPulse {
+    0% { background-color: #dbeafe !important; transform: translateY(-6px) scale(1.01); box-shadow: 0 8px 25px rgba(59,104,183,0.3); }
+    50% { background-color: #eff6ff !important; transform: translateY(-2px); }
+    100% { background-color: #ffffff !important; transform: translateY(0) scale(1); box-shadow: none; }
+}
+
+
 
 
