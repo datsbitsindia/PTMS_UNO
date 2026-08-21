@@ -49,7 +49,7 @@ async function init() {
             console.error('MySQL Pool Error (Handled):', err);
         });
         pool.on('connection', (connection) => {
-            connection.query("SET time_zone = '+05:30'").catch(() => {});
+            connection.query("SET time_zone = '+05:30'");
         });
     }
     try { await pool.query("SET time_zone = '+05:30'"); } catch (e) { }
