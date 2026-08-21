@@ -759,7 +759,9 @@ document.addEventListener('submit', async function(e) {
                         bubble.className = `chat-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
                         bubble.dataset.commentId = c.id;
 
-                        const d = new Date(c.created_at);
+                        let dateStr = String(c.created_at || '').trim();
+                        if (dateStr && !dateStr.includes('T') && dateStr.includes(' ')) dateStr = dateStr.replace(' ', 'T');
+                        const d = new Date(dateStr);
                         const timeStr = isNaN(d.getTime()) ? c.created_at : d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 
                         bubble.innerHTML = `

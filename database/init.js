@@ -48,6 +48,9 @@ async function init() {
         pool.on('error', (err) => {
             console.error('MySQL Pool Error (Handled):', err);
         });
+        pool.on('connection', (connection) => {
+            connection.query("SET time_zone = '+05:30'").catch(() => {});
+        });
     }
     try { await pool.query("SET time_zone = '+05:30'"); } catch (e) { }
     await migrateOldTables();
