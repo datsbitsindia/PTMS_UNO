@@ -50,7 +50,6 @@ const baseQuery = `
 const canView = async (u, t) => {
     if (u.role === 'admin') return true;
     if (String(t.created_by) === String(u.id)) return true;
-    if (u.role === 'manager' && t.manager_id && String(t.manager_id).split(',').map(x => x.trim()).includes(String(u.id))) return true;
     const assignedArr = String(t.assigned_to || '').split(',').map(x => x.trim());
     if (assignedArr.includes(String(u.id))) return true;
     const isAssignee = await db.prepare('SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?').get(t.id, u.id);
@@ -69,12 +68,9 @@ exports.list = async (req, res) => {
     let baseFilter = '1=1';
     let params = [u.id];
 
-    if (u.role === 'employee') {
+    if (u.role === 'employee' || u.role === 'manager') {
         baseFilter = '(t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
         params.push(u.id, u.id, u.id, u.id, u.id);
-    } else if (u.role === 'manager') {
-        baseFilter = '(FIND_IN_SET(?, p.manager_id) > 0 OR t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
-        params.push(u.id, u.id, u.id, u.id, u.id, u.id);
     }
 
 
@@ -296,7 +292,6 @@ exports.save = async (req, res) => {
         if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
 
         const canEdit = req.session.user.id === existingTask.created_by ||
-                       req.session.user.id === existingTask.manager_id ||
                        String(existingTask.assigned_to || '').split(',').includes(String(req.session.user.id));
 
         if (!canEdit) {
@@ -604,7 +599,6 @@ exports.remove = async (req, res) => {
     }
 
     const canDelete = req.session.user.id === task.created_by ||
-                      req.session.user.id === task.manager_id ||
                       String(task.assigned_to || '').split(',').includes(String(req.session.user.id));
 
     if (!canDelete) {

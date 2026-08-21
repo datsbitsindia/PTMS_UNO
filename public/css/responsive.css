@@ -13,7 +13,7 @@
   .topbar-actions .btn,.topbar-right-group .btn,.btn-sm{min-height:32px;height:32px;padding:6px 12px;font-size:12px;border-radius:8px!important;white-space:nowrap;font-weight:700}
   .link-btn,.topbar-right-group .link-btn{min-height:32px;height:32px;padding:6px 12px;border-radius:8px!important;background:#d3e3fd!important;color:#0b2d68!important;font-weight:700;font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center}
   .menu-btn{display:none!important}
-  .content{width:100%;max-width:none;padding:18px 14px 30px}
+  .content{width:100%;max-width:none;padding:12px 0 30px}
   .page-head{margin:0 0 16px;padding:18px;border-radius:var(--mobile-radius);background:linear-gradient(135deg,#2b579a,#3b68b7);color:white;align-items:center;box-shadow:0 10px 24px rgba(43,87,154,.25)}
   .page-head h1{margin:0;font-size:23px;line-height:1.2;color:#fff;font-weight:800}
   .page-head p{margin:5px 0 0;color:#d3e3fd;font-size:13px}
@@ -73,7 +73,7 @@
   .notification-list a,.files a{padding:13px 4px}
 }
 @media(max-width:480px){
-  .content{padding:12px 10px 24px}
+  .content{padding:10px 0 24px}
   .page-head{padding:15px;align-items:stretch;gap:12px}
   .page-head h1{font-size:22px}
   .page-head .btn{width:100%}
@@ -820,6 +820,38 @@ html body .entity-card.manager-card .row-actions {
         right: 20px;
         bottom: 20px;
         width: 350px;
+    }
+}
+
+/* Force expand main container and panel horizontally on mobile view */
+@media (max-width: 900px) {
+    html body .content {
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    html body .ui-panel {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+    }
+    html body .metric-grid {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    html body .overdue-alert {
+        margin-left: 4px !important;
+        margin-right: 4px !important;
+    }
+    html body .topbar {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
     }
 }
 
