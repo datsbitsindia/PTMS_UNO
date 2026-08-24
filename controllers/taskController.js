@@ -33,7 +33,7 @@ const baseQuery = `
             (SELECT GROUP_CONCAT(u.name ORDER BY u.id SEPARATOR ', ') FROM users u WHERE FIND_IN_SET(u.id, t.assigned_to) > 0),
             a.name
         ) AS assigned_name,
-        c.name creator_name, p.name project_name, p.manager_id,
+        c.name creator_name, p.name project_name, COALESCE(t.project_id, p.id) AS project_id, p.manager_id,
         CASE WHEN t.due_date<CURDATE() AND COALESCE(
             (SELECT name FROM statuses WHERE id = ta_sub.status_id LIMIT 1),
             (SELECT name FROM statuses WHERE id = t.status_id LIMIT 1),

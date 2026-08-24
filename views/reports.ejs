@@ -9,7 +9,7 @@
             <option value="">All Projects</option>
             <% (typeof projects !== 'undefined' ? projects : []).forEach(p => { %>
                 <option value="<%= p.id %>" <%= String(selectedProject) === String(p.id) ? 'selected' : '' %>>
-                    <%= p.name %>
+                    <%= p.name %><% if (p.name !== 'Self Task') { %> (ID: #<%= p.id %>)<% } %>
                 </option>
             <% }) %>
         </select>

@@ -41,6 +41,7 @@ exports.checkUpdates = async (req, res) => {
                 status: t.status,
                 priority: t.priority,
                 project_name: t.project_name || 'No project',
+                project_id: t.project_id || null,
                 creator_name: t.creator_name || 'System',
                 created_by: t.created_by,
                 due_date: t.due_date,
