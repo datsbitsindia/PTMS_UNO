@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # 1. Node.js Web Application
+  ptms-uno-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ptms-uno-web
+    network_mode: "host"
+    environment:
+      - PORT=3001
+      - PYTHON_MCP_URL=http://127.0.0.1:8001
+      - DB_HOST=127.0.0.1
+      - DB_NAME=ptms_uno
+      - TABLE_PREFIX=uno_
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    env_file:
+      - .env
+    restart: always
+
+  # 2. Python FastMCP Tool Server
+  ptms-uno-mcp:
+    build:
+      context: ./mcp_service
+      dockerfile: Dockerfile
+    container_name: ptms-uno-mcp
+    network_mode: "host"
+    environment:
+      - DB_HOST=127.0.0.1
+      - DB_NAME=ptms_uno
+      - TABLE_PREFIX=uno_
+      - PORT=8001
+    env_file:
+      - .env
+    restart: always

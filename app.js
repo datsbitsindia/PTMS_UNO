@@ -88,6 +88,7 @@ async function start() {
         }
     });
     webApp.use(require('./routes/audit'));
+    webApp.use('/api/chat', require('./routes/aiRoutes'));
     webApp.use(require('./routes'));
     webApp.use((req, res) => res.status(404).render('error', {
         message: 'Page not found'

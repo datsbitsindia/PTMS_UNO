@@ -1,0 +1,681 @@
+const { GoogleGenAI } = require('@google/genai');
+const config = require('../config');
+
+// Initialize Gemini Client
+const apiKey = process.env.GEMINI_API_KEY || config.geminiApiKey || '';
+const aiClient = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+// Python FastMCP Service URL
+const PYTHON_MCP_URL = process.env.PYTHON_MCP_URL || 'http://localhost:8000';
+
+// Cache for tools declaration
+let cachedToolsDeclaration = null;
+
+// Helper to format raw tool result to natural text if AI follow-up fails
+function formatToolResultToText(toolName, result, currentUser) {
+    if (!result) return "Task processed successfully.";
+    if (result.error) return `⚠️ Error: ${result.error}`;
+    if (result.message) return result.message;
+
+    if (result.tasks && Array.isArray(result.tasks)) {
+        if (result.tasks.length === 0) return "No tasks found matching this filter.";
+
+        const currentUserName = (currentUser && currentUser.name) ? currentUser.name.toLowerCase() : '';
+        const currentUserId = (currentUser && currentUser.id) ? String(currentUser.id) : '';
+
+        const todoTasks = [];
+        const assignedOutTasks = [];
+
+        result.tasks.forEach(t => {
+            const assignees = (t.assigned_to_names || '').toLowerCase();
+            const rawAssignees = String(t.assigned_to || '');
+            const isAssignedToMe = (currentUserName && assignees.includes(currentUserName)) || (currentUserId && rawAssignees.split(',').includes(currentUserId));
+            
+            if (isAssignedToMe) {
+                todoTasks.push(t);
+            } else {
+                assignedOutTasks.push(t);
+            }
+        });
+
+        let reply = `Found ${result.tasks.length} task(s):\n\n`;
+
+        if (todoTasks.length > 0) {
+            reply += `📋 **To Do Tasks (Assigned to You - ${todoTasks.length}):**\n`;
+            todoTasks.forEach((t, i) => {
+                reply += `${i + 1}. **${t.title}** (ID: #${t.id})\n   - Status: ${t.status_str || t.status} | Priority: ${t.priority_str || t.priority}\n   - Assigned Date: ${t.created_at || 'N/A'} | Due Date: ${t.due_date}\n`;
+            });
+            reply += `\n`;
+        }
+
+        if (assignedOutTasks.length > 0) {
+            reply += `📤 **Assigned Out Tasks (Assigned to Others - ${assignedOutTasks.length}):**\n`;
+            assignedOutTasks.forEach((t, i) => {
+                reply += `${i + 1}. **${t.title}** (ID: #${t.id})\n   - Assigned To: ${t.assigned_to_names || 'Unassigned'}\n   - Status: ${t.status_str || t.status} | Priority: ${t.priority_str || t.priority}\n   - Assigned Date: ${t.created_at || 'N/A'} | Due Date: ${t.due_date}\n`;
+            });
+        }
+
+        return reply.trim();
+    }
+    if (result.task && typeof result.task === 'object') {
+        const t = result.task;
+        return `Task #${t.id} Details:\n- **Title:** ${t.title}\n- **Status:** ${t.status_str || t.status}\n- **Priority:** ${t.priority_str || t.priority}\n- **Assigned To:** ${t.assigned_to_names || 'None'}\n- **Due Date:** ${t.due_date || 'N/A'}`;
+    }
+    if (result.team && Array.isArray(result.team)) {
+        let reply = `Team Members (${result.team.length}):\n`;
+        result.team.forEach(m => {
+            reply += `- **${m.name}** (${m.email}) - ${m.role} (${m.department || ''})\n`;
+        });
+        return reply;
+    }
+    if (result.overdue_tasks && Array.isArray(result.overdue_tasks)) {
+        if (result.overdue_tasks.length === 0) return "Great news! You have no overdue tasks.";
+        let reply = `⚠️ Overdue Tasks (${result.overdue_tasks.length}):\n`;
+        result.overdue_tasks.forEach(t => {
+            reply += `- **${t.title}** (ID: #${t.id}) - Due: ${t.due_date}\n`;
+        });
+        return reply;
+    }
+    if (result.productivity) {
+        const p = result.productivity;
+        return `Productivity Summary:\n- Total Assigned: ${p.total_assigned_tasks}\n- Completed: ${p.completed_tasks}\n- Overdue: ${p.overdue_tasks}\n- Completion Rate: ${p.completion_rate_percentage}%\n- Score: ${p.performance_score}`;
+    }
+    return typeof result === 'string' ? result : JSON.stringify(result);
+}
+
+// Fetch tool schemas dynamically from Python FastMCP Server
+async function fetchDynamicToolsDeclaration() {
+    if (cachedToolsDeclaration && cachedToolsDeclaration.length > 0) {
+        return cachedToolsDeclaration;
+    }
+    try {
+        const response = await fetch(`${PYTHON_MCP_URL}/tools_schema`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.functionDeclarations && data.functionDeclarations.length > 0) {
+                cachedToolsDeclaration = [{ functionDeclarations: data.functionDeclarations }];
+                return cachedToolsDeclaration;
+            }
+        }
+    } catch (err) {
+        console.warn('Could not fetch dynamic tools from Python FastMCP server, using fallback schema:', err.message);
+    }
+    return cachedToolsDeclaration || [];
+}
+
+// Normalize JSON Schema types from Gemini format (UPPERCASE) to Groq/OpenAI JSON Schema (lowercase draft-07)
+function normalizeJsonSchemaForGroq(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(normalizeJsonSchemaForGroq);
+
+    const newObj = {};
+    for (const key of Object.keys(obj)) {
+        if (key === 'type' && typeof obj[key] === 'string') {
+            newObj[key] = obj[key].toLowerCase();
+        } else {
+            newObj[key] = normalizeJsonSchemaForGroq(obj[key]);
+        }
+    }
+
+    if (newObj.properties && typeof newObj.properties === 'object') {
+        const requiredList = Array.isArray(newObj.required) ? newObj.required : [];
+        for (const propName of Object.keys(newObj.properties)) {
+            if (!requiredList.includes(propName)) {
+                const prop = newObj.properties[propName];
+                if (prop && prop.type && prop.type !== 'array' && prop.type !== 'object') {
+                    prop.type = [prop.type, 'null'];
+                }
+            }
+        }
+    }
+    return newObj;
+}
+
+// Tool Execution Handler - Delegates execution to Python FastMCP Server
+async function executeTool(toolName, args, user) {
+    try {
+        // Clean null argument values before passing to Python FastMCP
+        const cleanedArgs = { ...(args || {}) };
+        for (const k of Object.keys(cleanedArgs)) {
+            if (cleanedArgs[k] === null) delete cleanedArgs[k];
+        }
+
+        const response = await fetch(`${PYTHON_MCP_URL}/call_tool`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tool_name: toolName,
+                args: cleanedArgs,
+                user: { id: user.id, name: user.name, role: user.role }
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error(`Python FastMCP Call Failed (${response.status}):`, errText);
+            return { error: `Python FastMCP Server Error: ${response.statusText}` };
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            return data.result;
+        } else {
+            return { error: data.error || 'Failed to execute tool on Python FastMCP Server.' };
+        }
+    } catch (err) {
+        console.error('AI Tool Execution Error (Python FastMCP Connection):', err);
+        return { error: `Python FastMCP connection failed: ${err.message}. Make sure Python FastMCP server is running on port 8000.` };
+    }
+}
+
+// OpenRouter API Provider Handler (Unlimited Free AI Models)
+async function processWithOpenRouter(user, message, existingHistory, toolsDeclaration, projectContextStr, teamContextStr) {
+    const openrouterKey = process.env.OPENROUTER_API_KEY || config.openrouterApiKey || '';
+    if (!openrouterKey) return null;
+
+    const openrouterTools = (toolsDeclaration?.[0]?.functionDeclarations || []).map(fn => ({
+        type: "function",
+        function: {
+            name: fn.name,
+            description: fn.description,
+            parameters: normalizeJsonSchemaForGroq(fn.parameters)
+        }
+    }));
+
+    const messages = [
+        {
+            role: "system",
+            content: `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+
+REAL DATABASE CONTEXT (LIVE INJECTED FROM MYSQL):
+- VALID REAL ACTIVE PROJECTS IN DATABASE: [${projectContextStr || 'AdwaitShakti'}]
+- VALID REAL TEAM MEMBERS IN DATABASE: [${teamContextStr || 'Bhavin, Jemini, Chintan, Chetan'}]
+
+CORE DOMAIN SCOPE & STRICT TASK-ONLY BOUNDARY:
+- You are 100% EXCLUSIVELY a Task Management Assistant for PTMS (Project & Task Management System).
+- Your ONLY function is handling Tasks (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, and task reports).
+- STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
+- If the user asks ANY question outside of Task Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
+  "I'm sorry, but I can only help with task-related requests such as creating, updating, or viewing tasks. Let me know if you need assistance with any of your tasks!"
+
+CRITICAL LANGUAGE & SCRIPT RULE:
+- ALWAYS write all responses using English / Latin letters ONLY (e.g. "Abhi aapke To Do tab mein koi pending task nahi hai").
+- NEVER use Devanagari script or Hindi characters (like "अभी आपके लिए...").
+
+OPERATIONAL TASK RULES:
+1. AUTOMATIC TASK LOOKUP (NEVER ASK USER FOR TASK ID):
+   - NEVER ask the user for a Task ID! End-users do not know database IDs.
+   - When a user asks to update, complete, delete, reassign, or add a comment to a task by title (e.g. "Backup Lelo forward this task to chintan", "Backup Lelo delete this task", "add comment is was done? Backup Lelo in this task"), ALWAYS call get_user_tasks first to search the database, automatically find the Task ID, and then perform the update/delete/reassign/comment action!
+2. TASK CREATION CLARIFICATION:
+   - When a user asks to create a task, check if essential details (title, assignee, due date, priority) are provided.
+   - If essential fields are missing, ask polite clarifying questions before invoking create_new_task, or suggest reasonable defaults and confirm with user.
+   - If user mentions an employee name (e.g. "Assign to Bhavin" or "forward to Chintan"), call get_team_members first to verify the exact person.
+3. STRICT ACTIVE PROJECT & HALLUCINATION PREVENTION RULE:
+   - Tasks CAN ONLY be assigned to the REAL ACTIVE PROJECTS listed above: [${projectContextStr || 'AdwaitShakti'}]!
+   - NEVER invent, guess, or label a word (such as "videos", "photo", "demo", "meeting", "test", "DBMS", "adversity") as a project name unless it is explicitly in [${projectContextStr}]!
+   - ONLY pass project_name to create_new_task IF the user explicitly specified a valid project name from [${projectContextStr}].
+   - If the user specifies a non-existing project (e.g. "videos", "DBMS"), respond directly and politely:
+     "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [${projectContextStr}]. Kripya inme se kisi active project par task add karein!"
+   - When asking clarifying questions for missing task details, NEVER invent a project name like "videos". Ask: "Which project would you like to assign this task to? Active projects: [${projectContextStr}]."
+   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
+   - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.
+4. TASK STATUS PERMISSION RULE:
+   - ONLY assigned team members (or Admin) can change a task's status or mark it Completed.
+   - If a Manager/Creator asks to mark a task as Completed that is assigned to someone else (e.g. Jemini), pass user_id and user_role to update_task_status tool. If tool returns Permission Denied, explain politely that only the assigned employee (or Admin) can mark their assigned tasks as Completed.
+5. DATE RANGE FILTERING RULE:
+   - Current Date context: 2026-08-20.
+   - When user asks for "tasks created in last N days", calculate start_date (e.g. 2026-08-18 for 3 days), set date_field='created_at', task_type='all', and call get_user_tasks.
+   - When user asks for tasks within a date range (e.g. "between 14th August to 20th August"), convert dates to YYYY-MM-DD format (start_date='2026-08-14', end_date='2026-08-20') and call get_user_tasks with task_type='all'.
+6. TEAM NAME MAPPING RULE:
+   - Always spell team names as: Bhavin (never Bhabi/Bhabhi), Jemini (starts with J, never Gemini), Chintan, Chetan.
+   - If user input contains misheard speech words like "Gemini" or "Bhabi", automatically map them to Jemini and Bhavin.
+7. SINGLE / RECENT TASK RESPONSE RULE:
+   - When the user asks for "the last task", "recent task", "latest task", or asks which specific task was created last, ONLY output the single 1 most recent task details. NEVER output the entire list of tasks.
+8. NEVER output raw JSON. Always summarize tool results in friendly natural language.`
+        },
+        ...(existingHistory || []).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content
+        })),
+        { role: "user", content: message }
+    ];
+
+    const openrouterModels = [
+        'openai/gpt-oss-20b:free',
+        'google/gemma-4-31b-it:free',
+        'z-ai/glm-5.2:free'
+    ];
+
+    let lastError = null;
+
+    for (const modelName of openrouterModels) {
+        let loopCount = 0;
+        let lastToolResult = null;
+
+        while (loopCount < 4) {
+            loopCount++;
+            try {
+                const body = {
+                    model: modelName,
+                    messages: messages,
+                    temperature: 0.2
+                };
+                if (openrouterTools.length > 0) body.tools = openrouterTools;
+
+                const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${openrouterKey}`,
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://ptms.datsbits.com",
+                        "X-Title": "PTMS Task Manager"
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    console.warn(`OpenRouter model ${modelName} error (${res.status}):`, errText);
+                    lastError = `OpenRouter (${res.status}): ${errText}`;
+                    break;
+                }
+
+                const data = await res.json();
+                const choice = data.choices?.[0]?.message;
+                if (!choice) break;
+
+                messages.push(choice);
+
+                if (choice.tool_calls && choice.tool_calls.length > 0) {
+                    const callObj = choice.tool_calls[0];
+                    const call = callObj.function;
+                    const toolCallId = callObj.id || `call_${Date.now()}`;
+                    if (!callObj.id) callObj.id = toolCallId;
+
+                    const args = typeof call.arguments === 'string' ? JSON.parse(call.arguments || '{}') : (call.arguments || {});
+                    const toolResult = await executeTool(call.name, args, user);
+                    lastToolResult = toolResult;
+
+                    messages.push({
+                        role: "tool",
+                        tool_call_id: toolCallId,
+                        content: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
+                    });
+
+                    continue;
+                }
+
+                const replyText = choice.content || choice.reasoning;
+                if (replyText && String(replyText).trim()) {
+                    return { reply: String(replyText).trim() };
+                }
+
+                if (lastToolResult) {
+                    return { reply: formatToolResultToText(choice.tool_calls?.[0]?.function?.name || "tool", lastToolResult, user) };
+                }
+            } catch (err) {
+                console.error(`OpenRouter model ${modelName} connection error:`, err);
+                lastError = err.message;
+                break;
+            }
+        }
+    }
+
+    return null;
+}
+
+// Groq API Provider Handler (Ultra-fast 14,400 free requests/day with multi-step tool loop)
+async function processWithGroq(user, message, existingHistory, toolsDeclaration, projectContextStr = 'AdwaitShakti', teamContextStr = 'Bhavin, Jemini, Chintan, Chetan') {
+    const groqKey = process.env.GROQ_API_KEY || config.groqApiKey || '';
+    if (!groqKey) return null;
+
+    const groqTools = (toolsDeclaration?.[0]?.functionDeclarations || []).map(fn => ({
+        type: "function",
+        function: {
+            name: fn.name,
+            description: fn.description,
+            parameters: normalizeJsonSchemaForGroq(fn.parameters)
+        }
+    }));
+
+    const messages = [
+        {
+            role: "system",
+            content: `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+
+REAL DATABASE CONTEXT (LIVE INJECTED FROM MYSQL):
+- VALID REAL ACTIVE PROJECTS IN DATABASE: [${projectContextStr || 'AdwaitShakti'}]
+- VALID REAL TEAM MEMBERS IN DATABASE: [${teamContextStr || 'Bhavin, Jemini, Chintan, Chetan'}]
+
+CORE DOMAIN SCOPE & STRICT TASK-ONLY BOUNDARY:
+- You are 100% EXCLUSIVELY a Task Management Assistant for PTMS (Project & Task Management System).
+- Your ONLY function is handling Tasks (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, and task reports).
+- STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
+
+CRITICAL LANGUAGE & SCRIPT RULE:
+- ALWAYS write all responses using English / Latin letters ONLY (e.g. "Abhi aapke To Do tab mein koi pending task nahi hai").
+- NEVER use Devanagari script or Hindi characters.
+
+OPERATIONAL TASK RULES:
+1. AUTOMATIC TASK LOOKUP (NEVER ASK USER FOR TASK ID):
+   - NEVER ask the user for a Task ID! End-users do not know database IDs.
+   - When a user asks to update, complete, delete, reassign, or add a comment to a task by title, ALWAYS call get_user_tasks first.
+2. TASK CREATION CLARIFICATION:
+   - When a user asks to create a task, check if essential details (title, assignee, due date, priority) are provided.
+3. STRICT ACTIVE PROJECT & HALLUCINATION PREVENTION RULE:
+   - Tasks CAN ONLY be assigned to the REAL ACTIVE PROJECTS listed above: [${projectContextStr || 'AdwaitShakti'}]!
+   - NEVER invent, guess, or label a word (such as "videos", "photo", "demo", "meeting", "test", "DBMS", "adversity") as a project name unless it is explicitly in [${projectContextStr}]!
+   - ONLY pass project_name to create_new_task IF the user explicitly specified a valid project name from [${projectContextStr}].
+   - If the user specifies a non-existing project (e.g. "videos", "DBMS"), respond directly and politely:
+     "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [${projectContextStr}]. Kripya inme se kisi active project par task add karein!"
+   - When asking clarifying questions for missing task details, NEVER invent a project name like "videos". Ask: "Which project would you like to assign this task to? Active projects: [${projectContextStr}]."
+   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
+   - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.`
+        },
+        ...(existingHistory || []).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content
+        })),
+        { role: "user", content: message }
+    ];
+
+    // Official Groq Models with full tool-calling support
+    const groqModels = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b'];
+    let lastGroqError = null;
+
+    for (const gModel of groqModels) {
+        let loopCount = 0;
+        let lastToolResult = null;
+
+        while (loopCount < 4) {
+            loopCount++;
+            try {
+                const body = {
+                    model: gModel,
+                    messages: messages,
+                    temperature: 0.2
+                };
+                if (groqTools.length > 0) body.tools = groqTools;
+
+                let res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${groqKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.status === 429) {
+                    console.warn(`Groq 429 rate limit on ${gModel}, auto retrying in 1.5s...`);
+                    await new Promise(r => setTimeout(r, 1500));
+                    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${groqKey}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(body)
+                    });
+                }
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    lastGroqError = `Groq API (${res.status}): ${errText}`;
+                    console.error(`Groq API Error (${res.status}) on ${gModel}:`, errText);
+                    if (lastToolResult) return { reply: formatToolResultToText("tool", lastToolResult, user) };
+                    break;
+                }
+
+                const data = await res.json();
+                const choice = data.choices?.[0]?.message;
+                if (!choice) break;
+
+                messages.push(choice);
+
+                // Check if LLM requested tool execution
+                if (choice.tool_calls && choice.tool_calls.length > 0) {
+                    const callObj = choice.tool_calls[0];
+                    const call = callObj.function;
+                    const toolCallId = callObj.id || `call_${Date.now()}`;
+                    if (!callObj.id) callObj.id = toolCallId;
+
+                    const args = typeof call.arguments === 'string' ? JSON.parse(call.arguments || '{}') : (call.arguments || {});
+                    const toolResult = await executeTool(call.name, args, user);
+                    lastToolResult = toolResult;
+
+                    messages.push({
+                        role: "tool",
+                        tool_call_id: toolCallId,
+                        content: typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
+                    });
+
+                    // Continue loop so LLM can process toolResult and issue follow-up action or text!
+                    continue;
+                }
+
+                // If LLM returned text response or reasoning, return it!
+                const replyText = choice.content || choice.reasoning;
+                if (replyText && String(replyText).trim()) {
+                    return { reply: String(replyText).trim() };
+                }
+
+                if (lastToolResult) {
+                    return { reply: formatToolResultToText(choice.tool_calls?.[0]?.function?.name || "tool", lastToolResult, user) };
+                }
+            } catch (err) {
+                console.error(`Groq API Model ${gModel} Connection Error:`, err);
+                lastGroqError = err.message;
+                break;
+            }
+        }
+    }
+
+    if (lastGroqError) {
+        return { reply: `Groq Error: ${lastGroqError}` };
+    }
+
+    return null; // Fallback to Gemini if all Groq models fail
+}
+
+// Process Chat Prompt with Conversation Context
+async function processUserMessage(user, message, existingHistory = []) {
+    const currentKey = process.env.GEMINI_API_KEY || config.geminiApiKey || '';
+    const groqKey = process.env.GROQ_API_KEY || config.groqApiKey || '';
+    const openrouterKey = process.env.OPENROUTER_API_KEY || config.openrouterApiKey || '';
+
+    if (!currentKey && !groqKey && !openrouterKey) {
+        return {
+            reply: `⚠️ API Key configured nahi hai! Please .env file mein GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY add karein.`
+        };
+    }
+
+    // Fetch dynamic tools schema from Python FastMCP
+    const toolsDeclaration = await fetchDynamicToolsDeclaration();
+
+    // Fetch live active projects and team members from DB to inject into system prompt
+    let projectContextStr = 'AdwaitShakti';
+    let teamContextStr = 'Bhavin, Jemini, Chintan, Chetan';
+    try {
+        const projRes = await executeTool('get_active_projects', { user_id: user.id, user_role: user.role || 'user' }, user);
+        if (projRes && projRes.projects && Array.isArray(projRes.projects)) {
+            const names = projRes.projects.map(p => p.name).filter(Boolean);
+            if (names.length > 0) projectContextStr = names.join(', ');
+        }
+    } catch (e) { console.warn('Context fetch get_active_projects error:', e.message); }
+    try {
+        const teamRes = await executeTool('get_team_members', {}, user);
+        if (teamRes && teamRes.members && Array.isArray(teamRes.members)) {
+            const names = teamRes.members.map(m => m.name).filter(Boolean);
+            if (names.length > 0) teamContextStr = names.join(', ');
+        }
+    } catch (e) { console.warn('Context fetch get_team_members error:', e.message); }
+
+    // Priority 1: Try OpenRouter API first
+    if (openrouterKey) {
+        const openrouterResult = await processWithOpenRouter(user, message, existingHistory, toolsDeclaration, projectContextStr, teamContextStr);
+        if (openrouterResult) return openrouterResult;
+    }
+
+    // Priority 2: Try Groq API
+    if (groqKey) {
+        const groqResult = await processWithGroq(user, message, existingHistory, toolsDeclaration, projectContextStr, teamContextStr);
+        if (groqResult) return groqResult;
+    }
+
+    // Priority 3: Fallback to Gemini SDK
+    const geminiHistory = (existingHistory || []).map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+    }));
+
+    const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+    let lastError = null;
+
+    for (const mName of candidateModels) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const client = new GoogleGenAI({ apiKey: currentKey });
+
+                const systemInstruction = `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+
+CORE DOMAIN SCOPE & STRICT TASK-ONLY BOUNDARY:
+- You are 100% EXCLUSIVELY a Task Management Assistant for PTMS (Project & Task Management System).
+- Your ONLY function is handling Tasks (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, and task reports).
+- STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
+- If the user asks ANY question outside of Task Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
+  "I'm sorry, but I can only help with task-related requests such as creating, updating, or viewing tasks. Let me know if you need assistance with any of your tasks!"
+
+CRITICAL LANGUAGE & SCRIPT RULE:
+- ALWAYS write all responses using English / Latin letters ONLY (e.g. "Abhi aapke To Do tab mein koi pending task nahi hai").
+- NEVER use Devanagari script or Hindi characters (like "अभी आपके लिए...").
+
+OPERATIONAL TASK RULES:
+1. AUTOMATIC TASK LOOKUP (NEVER ASK USER FOR TASK ID):
+   - NEVER ask the user for a Task ID! End-users do not know database IDs.
+   - When a user asks to update, complete, delete, reassign, or add a comment to a task by title (e.g. "Backup Lelo forward this task to chintan", "Backup Lelo delete this task", "add comment is was done? Backup Lelo in this task"), ALWAYS call get_user_tasks first to search the database, automatically find the Task ID, and then perform the update/delete/reassign/comment action!
+2. TASK CREATION CLARIFICATION:
+   - When a user asks to create a task, check if essential details (title, assignee, due date, priority) are provided.
+   - If essential fields are missing, ask polite clarifying questions before invoking create_new_task, or suggest reasonable defaults and confirm with user.
+   - If user mentions an employee name (e.g. "Assign to Bhavin" or "forward to Chintan"), call get_team_members first to verify the exact person.
+3. STRICT ACTIVE PROJECT & ERROR REPORTING RULE:
+   - Tasks can ONLY be assigned to EXISTING ACTIVE / PENDING projects!
+   - NEVER invent, guess, or hallucinate project names (such as "DBMS", "adversity", "test")!
+   - ONLY pass project_name to create_new_task IF the user explicitly specified a project name in their prompt.
+   - If the user specifies a non-existing or completed project, or if create_new_task returns a project error, respond directly and politely:
+     "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [list active projects]. Kripya inme se kisi active project ka naam batayein!"
+   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
+   - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.
+4. TASK STATUS PERMISSION RULE:
+   - ONLY assigned team members (or Admin) can change a task's status or mark it Completed.
+   - If a Manager/Creator asks to mark a task as Completed that is assigned to someone else (e.g. Jemini), pass user_id and user_role to update_task_status tool. If tool returns Permission Denied, explain politely that only the assigned employee (or Admin) can mark their assigned tasks as Completed.
+5. DATE RANGE FILTERING RULE:
+   - Current Date context: 2026-08-20.
+   - When user asks for "tasks created in last N days", calculate start_date (e.g. 2026-08-18 for 3 days), set date_field='created_at', task_type='all', and call get_user_tasks.
+   - When user asks for tasks within a date range (e.g. "between 14th August to 20th August"), convert dates to YYYY-MM-DD format (start_date='2026-08-14', end_date='2026-08-20') and call get_user_tasks with task_type='all'.
+6. TEAM NAME MAPPING RULE:
+   - Always spell team names as: Bhavin (never Bhabi/Bhabhi), Jemini (starts with J, never Gemini), Chintan, Chetan.
+   - If user input contains misheard speech words like "Gemini" or "Bhabi", automatically map them to Jemini and Bhavin.
+7. SINGLE / RECENT TASK RESPONSE RULE:
+   - When the user asks for "the last task", "recent task", "latest task", or asks which specific task was created last, ONLY output the single 1 most recent task details. NEVER output the entire list of tasks.
+8. NEVER output raw JSON. Always summarize tool results in friendly natural language.`;
+
+                const chatConfig = {
+                    systemInstruction: systemInstruction
+                };
+                if (toolsDeclaration && toolsDeclaration.length > 0) {
+                    chatConfig.tools = toolsDeclaration;
+                }
+
+                const chat = client.chats.create({
+                    model: mName,
+                    history: geminiHistory,
+                    config: chatConfig
+                });
+
+                const initialRes = await chat.sendMessage({ message });
+
+                if (initialRes.functionCalls && initialRes.functionCalls.length > 0) {
+                    const call = initialRes.functionCalls[0];
+                    const toolResult = await executeTool(call.name, call.args, user);
+
+                    const followUpRes = await chat.sendMessage({
+                        message: [
+                            {
+                                functionResponse: {
+                                    name: call.name,
+                                    response: toolResult
+                                }
+                            }
+                        ]
+                    });
+
+                    return { reply: followUpRes.text || JSON.stringify(toolResult) };
+                }
+
+                return { reply: initialRes.text || 'Done.' };
+            } catch (err) {
+                lastError = err;
+                console.warn(`Model ${mName} attempt ${attempt} failed:`, err.message || err);
+                if (attempt === 1) await new Promise(r => setTimeout(r, 600));
+            }
+        }
+    }
+
+    console.error('All AI Models Failed:', lastError);
+    const errMsg = lastError ? (lastError.message || String(lastError)) : '';
+    if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('Quota exceeded')) {
+        return { reply: `⚠️ High AI traffic / Daily Free limit reached! Please 30 seconds wait karke dobara message bhejin.` };
+    }
+    return { reply: `AI Response Error: ${errMsg || 'High traffic on AI service. Please try again in a few seconds.'}` };
+}
+
+// Groq Whisper Speech-to-Text Transcription Service (0.1s Ultra-fast Hindi/English AI Transcriber)
+async function transcribeAudioWithGroq(audioBuffer, filename = 'speech.webm') {
+    const groqKey = process.env.GROQ_API_KEY || config.groqApiKey || '';
+    if (!groqKey) return null;
+
+    try {
+        let teamContext = 'Bhavin, Jemini, Chintan, Chetan';
+        let projectContext = 'AdwaitShakti';
+        try {
+            const teamRes = await executeTool('get_team_members', {}, { id: 1, role: 'admin' });
+            if (teamRes && teamRes.members && Array.isArray(teamRes.members)) {
+                teamContext = teamRes.members.map(m => m.name).join(', ');
+            }
+            const projRes = await executeTool('get_active_projects', { user_id: 1, user_role: 'admin' }, { id: 1, role: 'admin' });
+            if (projRes && projRes.projects && Array.isArray(projRes.projects)) {
+                projectContext = projRes.projects.map(p => p.name).join(', ');
+            }
+        } catch (e) {}
+
+        const formData = new FormData();
+        const blob = new Blob([audioBuffer], { type: 'audio/webm' });
+        formData.append('file', blob, filename);
+        formData.append('model', 'whisper-large-v3-turbo');
+        formData.append('language', 'en');
+        formData.append('prompt', `PTMS Task Manager dictionary. Team members: ${teamContext}. Projects: ${projectContext}. Always transcribe team names as ${teamContext} and project names as ${projectContext}.`);
+
+        const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${groqKey}`
+            },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error('Groq Whisper API Error:', res.status, errText);
+            return null;
+        }
+
+        const data = await res.json();
+        return data.text ? data.text.trim() : null;
+    } catch (err) {
+        console.error('transcribeAudioWithGroq Error:', err);
+        return null;
+    }
+}
+
+module.exports = { processUserMessage, transcribeAudioWithGroq };

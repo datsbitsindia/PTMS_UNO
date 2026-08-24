@@ -31,6 +31,10 @@ Thumbs.db
 # VS Code
 .vscode/
 
+# Python Cache
+__pycache__/
+*.pyc
+
 # AWS Keys (NEVER push these)
 *.pem
 aws/
