@@ -161,7 +161,7 @@
                     <div style="font-size:11px; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                         <b>Assigned To:</b> <%= t.assigned_name %> 
                         <span class="role-badge <%= t.assigned_role %>" style="font-size:9px; padding:1px 5px;"><%= t.assigned_role %></span>
-                        · <b>Project:</b> <span style="color:#3b68b7; font-weight:700;">#<%= t.id %> <%= t.project_name || 'Self Task' %></span>
+                        · <b>Project:</b> <span style="color:#3b68b7; font-weight:700;">#<%= t.task_number || t.id %> <%= t.project_name || 'Self Task' %></span>
                     </div>
 
                     <% if (t.description) { %>

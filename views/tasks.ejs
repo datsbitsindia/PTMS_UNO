@@ -128,7 +128,7 @@
                     <h4><a href="/tasks/<%= rt.id %>"><%= rt.title %></a></h4>
                     <p><%= rt.description || 'Complete daily morning routine' %></p>
                     <div class="routine-card-footer">
-                        <small><i class="fa-solid fa-folder"></i> #<%= rt.id %> <%= rt.project_name || 'Project' %></small>
+                        <small><i class="fa-solid fa-folder"></i> #<%= rt.task_number || rt.id %> <%= rt.project_name || 'Project' %></small>
                         <a href="/tasks/<%= rt.id %>" class="btn btn-sm primary">Start / Complete</a>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
                     </div>
 
                     <small style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; font-size: 13px; color: #3b68b7; font-weight: 600;">
-                        #<%= t.id %> <%= t.project_name || 'No project' %>
+                        #<%= t.task_number || t.id %> <%= t.project_name || 'No project' %>
                     </small>
 
                 </div>
