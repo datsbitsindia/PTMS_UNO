@@ -80,8 +80,13 @@ async function start() {
     webApp.use(async (req, res, next) => {
         try {
             Object.assign(res.locals, helpers);
-            if (req.session.user) await notifications.syncOverdue();
-            res.locals.unread = req.session.user ? (await database.db.prepare('SELECT COUNT(*) count FROM notifications WHERE user_id=? AND is_read=0').get(req.session.user.id)).count : 0;
+            if (req.session.user) {
+                notifications.syncOverdue().catch(e => console.error('Background syncOverdue error:', e));
+                const unreadRow = await database.db.prepare('SELECT COUNT(*) count FROM notifications WHERE user_id=? AND is_read=0').get(req.session.user.id);
+                res.locals.unread = unreadRow ? unreadRow.count : 0;
+            } else {
+                res.locals.unread = 0;
+            }
             next();
         } catch (e) {
             next(e);

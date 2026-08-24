@@ -1,6 +1,7 @@
 const path = require('path');
 const {
-    db
+    db,
+    createTaskAtomic
 } = require('../database/init');
 const activity = require('../services/activityService');
 const notifications = require('../services/notificationService');
@@ -61,18 +62,18 @@ const canView = async (u, t) => {
 
 exports.list = async (req, res) => {
     const u = req.session.user;
+    const orgId = u.organization_id || 1;
     
     // Auto sync daily routine tasks for today
     routineService.syncDailyRoutines().catch(e => console.error('syncDailyRoutines bg error:', e));
 
-    let baseFilter = '1=1';
-    let params = [u.id];
+    let baseFilter = 't.organization_id=?';
+    let params = [u.id, orgId];
 
     if (u.role === 'employee' || u.role === 'manager') {
-        baseFilter = '(t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
+        baseFilter += ' AND (t.created_by=? OR FIND_IN_SET(?, t.assigned_to) > 0 OR t.id IN (SELECT task_id FROM task_assignees WHERE user_id=?) OR t.id IN (SELECT task_id FROM task_forward_logs WHERE from_user_id=? OR to_user_id=?))';
         params.push(u.id, u.id, u.id, u.id, u.id);
     }
-
 
     const filters = [baseFilter];
 
@@ -121,11 +122,11 @@ const statusRank = (statusStr) => {
         if (rA !== rB) return rA - rB;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
-    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
-    const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
+    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);
+    const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);
 
-    const reportingUsers = await db.prepare("SELECT id,name,role,designation FROM users WHERE role IN ('manager','admin') AND active=1 ORDER BY role, name").all();
-    const projects = await db.prepare("SELECT id,name FROM projects WHERE (status NOT IN (2, 3, '2', '3', 'Completed', 'Cancelled') AND status_id NOT IN (2, 3)) OR name='Self Task' ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
+    const reportingUsers = await db.prepare("SELECT id,name,role,designation FROM users WHERE role IN ('manager','admin') AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY role, name").all(orgId, orgId);
+    const projects = await db.prepare("SELECT id,name FROM projects WHERE organization_id=? AND ((status NOT IN (2, 3, '2', '3', 'Completed', 'Cancelled') AND status_id NOT IN (2, 3)) OR name='Self Task') ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all(orgId);
     
     let dailyRoutines = [];
     if (u.role === 'manager') {
@@ -134,9 +135,9 @@ const statusRank = (statusStr) => {
             FROM daily_routines r 
             JOIN projects p ON p.id=r.project_id 
             JOIN users u ON u.id=r.assigned_to 
-            WHERE r.created_by=? 
+            WHERE r.created_by=? AND r.organization_id=?
             ORDER BY r.created_at DESC
-        `).all(u.id);
+        `).all(u.id, orgId);
     }
 
     res.render('tasks', {
@@ -151,15 +152,16 @@ const statusRank = (statusStr) => {
 };
 
 exports.detail = async (req, res) => {
-    const task = await db.prepare(baseQuery + ' WHERE t.id=?').get(req.session.user.id, req.params.id);
+    const orgId = req.session.user.organization_id || 1;
+    const task = await db.prepare(baseQuery + ' WHERE t.id=? AND t.organization_id=?').get(req.session.user.id, req.params.id, orgId);
     if (!task || !(await canView(req.session.user, task))) return res.status(404).render('error', {
         message: 'Task not found'
     });
     const comments = await db.prepare('SELECT c.*,u.name FROM comments c JOIN users u ON u.id=c.user_id WHERE task_id=? ORDER BY c.created_at').all(task.id);
     const attachments = await db.prepare('SELECT * FROM attachments WHERE task_id=? ORDER BY created_at DESC').all(task.id);
-    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 ORDER BY name").all();
-    const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 ORDER BY name").all();
-    const projects = req.session.user.role === 'admin' ? await db.prepare("SELECT id,name FROM projects ORDER BY name").all() : await db.prepare("SELECT id,name FROM projects WHERE manager_id=? ORDER BY name").all(req.session.user.id);
+    const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);
+    const managers = await db.prepare("SELECT id,name,designation FROM users WHERE role='manager' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);
+    const projects = req.session.user.role === 'admin' ? await db.prepare("SELECT id,name FROM projects WHERE organization_id=? ORDER BY name").all(orgId) : await db.prepare("SELECT id,name FROM projects WHERE organization_id=? AND FIND_IN_SET(?, manager_id) > 0 ORDER BY name").all(orgId, req.session.user.id);
     const forwardLogs = await db.prepare(`
         SELECT f.*, ufrom.name as from_name, uto.name as to_name
         FROM task_forward_logs f
@@ -276,9 +278,10 @@ exports.save = async (req, res) => {
         project_id
     } = req.body;
 
+    const orgId = req.session.user.organization_id || 1;
     let pid = project_id ? Number(project_id) : null;
     if (!pid) {
-        const selfTaskProj = await db.prepare("SELECT id FROM projects WHERE name='Self Task' LIMIT 1").get();
+        const selfTaskProj = await db.prepare("SELECT id FROM projects WHERE name='Self Task' AND organization_id=? LIMIT 1").get(orgId);
         if (selfTaskProj) pid = selfTaskProj.id;
     }
 
@@ -379,10 +382,23 @@ exports.save = async (req, res) => {
             }
         } catch(e) {}
 
-        const result = await db.prepare('INSERT INTO tasks(project_id,title,description,priority,priority_id,status,status_id,due_date,created_by,assigned_to,estimated_hours,is_self_task) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(
-            pid, title, description, priorityName, priorityId, statusName, statusId, due_date || null, createdBy, assignedToStr, Number(estimated_hours) || 0, isSelfTask
-        );
-        const taskId = result.lastInsertRowid;
+        const orgId = req.session.user.organization_id || 1;
+        const taskCreationResult = await createTaskAtomic({
+            organization_id: orgId,
+            project_id: pid,
+            title,
+            description,
+            priority: priorityName,
+            priority_id: priorityId,
+            status: statusName,
+            status_id: statusId,
+            due_date: due_date || null,
+            created_by: createdBy,
+            assigned_to: assignedToStr,
+            estimated_hours: Number(estimated_hours) || 0,
+            is_self_task: isSelfTask
+        });
+        const taskId = taskCreationResult.id;
 
         try {
             if (assignees.length > 1) {
@@ -447,11 +463,12 @@ exports.saveRoutine = async (req, res) => {
     const priorityMap = { 'Low': 0, 'Medium': 1, 'High': 2, 'Critical': 3 };
     const priorityInt = priorityMap[priority] ?? 2; // Default to 2 (High)
 
+    const orgId = req.session.user.organization_id || 1;
     for (const assigneeId of assignees) {
         await db.prepare(`
             INSERT INTO daily_routines
-            (project_id, created_by, assigned_to, title, description, priority, priority_id, estimated_hours, start_date, end_date, daily_time, mandatory, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            (project_id, created_by, assigned_to, title, description, priority, priority_id, estimated_hours, start_date, end_date, daily_time, mandatory, active, organization_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
         `).run(
             pid,
             req.session.user.id,
@@ -464,7 +481,8 @@ exports.saveRoutine = async (req, res) => {
             start_date,
             end_date,
             daily_time,
-            mandatory ? 1 : 0
+            mandatory ? 1 : 0,
+            orgId
         );
 
         await activity.log(req.session.user.id, 'Daily Routine Created', title);

@@ -60,7 +60,7 @@
 
         <div class="topbar-user">
             <strong><%= user.name %></strong>
-            <small><%= user.role %></small>
+            <small><%= user.role %><% if (typeof currentOrg !== 'undefined' && currentOrg && currentOrg.name) { %> · <%= currentOrg.name %><% } %></small>
         </div>
 
         <div class="topbar-right-group" style="display:flex; align-items:center; gap:8px; margin-left:auto;">

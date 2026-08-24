@@ -6,6 +6,8 @@ exports.list = async (req, res) => {
         return res.status(403).render('error', { message: 'Access denied. Admin only.' });
     }
 
+    const orgId = user.organization_id || 1;
+
     const {
         date_filter = 'today',
         start_date = '',
@@ -14,8 +16,8 @@ exports.list = async (req, res) => {
         status = ''
     } = req.query;
 
-    let whereClause = "WHERE a.role IN ('manager', 'employee')";
-    let params = [];
+    let whereClause = "WHERE t.organization_id = ? AND (a.role IN ('manager', 'employee') OR a.role IS NULL)";
+    let params = [orgId];
 
     // Date Filter logic
     if (date_filter === 'today') {
@@ -39,11 +41,11 @@ exports.list = async (req, res) => {
     if (status) {
         const cleanStatus = status.trim().toLowerCase();
         if (cleanStatus === 'overdue') {
-            whereClause += " AND t.due_date < CURDATE() AND t.status NOT IN ('Completed', 'Cancelled')";
+            whereClause += " AND t.due_date < CURDATE() AND t.status NOT IN ('Completed', 'Cancelled', '2', '3')";
         } else if (cleanStatus === 'pending') {
-            whereClause += " AND LOWER(t.status) IN ('pending', 'planned')";
+            whereClause += " AND LOWER(CAST(t.status AS CHAR)) IN ('pending', 'planned', '0', '4')";
         } else {
-            whereClause += " AND LOWER(t.status) = ?";
+            whereClause += " AND LOWER(CAST(t.status AS CHAR)) = ?";
             params.push(cleanStatus);
         }
     }
@@ -51,23 +53,27 @@ exports.list = async (req, res) => {
     const sql = `
         SELECT 
             t.*,
-            a.name AS assigned_name,
-            a.role AS assigned_role,
+            COALESCE(
+                (SELECT GROUP_CONCAT(u.name ORDER BY u.name SEPARATOR ', ') FROM task_assignees ta2 JOIN users u ON u.id=ta2.user_id WHERE ta2.task_id=t.id),
+                (SELECT GROUP_CONCAT(u.name ORDER BY u.id SEPARATOR ', ') FROM users u WHERE FIND_IN_SET(u.id, t.assigned_to) > 0),
+                a.name, 'Unassigned'
+            ) AS assigned_name,
+            COALESCE(a.role, 'employee') AS assigned_role,
             a.department AS assigned_dept,
             c.name AS creator_name,
             c.role AS creator_role,
             p.name AS project_name,
-            CASE WHEN t.due_date < CURDATE() AND t.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END AS is_overdue
+            CASE WHEN t.due_date < CURDATE() AND t.status NOT IN ('Completed','Cancelled','2','3') THEN 1 ELSE 0 END AS is_overdue
         FROM tasks t
-        JOIN users a ON a.id = t.assigned_to
-        JOIN users c ON c.id = t.created_by
+        LEFT JOIN users a ON a.id = t.assigned_to
+        LEFT JOIN users c ON c.id = t.created_by
         LEFT JOIN projects p ON p.id = t.project_id
         ${whereClause}
         ORDER BY t.created_at DESC
     `;
 
     const tasks = await db.prepare(sql).all(...params);
-    const projects = await db.prepare("SELECT id, name FROM projects ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all();
+    const projects = await db.prepare("SELECT id, name FROM projects WHERE organization_id=? ORDER BY CASE WHEN name='Self Task' THEN 0 ELSE 1 END, name").all(orgId);
 
     res.render('updates', {
         tasks,

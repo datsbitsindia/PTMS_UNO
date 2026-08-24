@@ -3,9 +3,9 @@ const { db } = require('../database/init');
 const activity = require('../services/activityService');
 const masterService = require('../services/masterService');
 
-
 exports.list = async (req, res) => {
     const currentUserRole = req.session.user.role;
+    const orgId = req.session.user.organization_id || 1;
     const sql = `
         SELECT u.*, 
                d.name AS dept_name, 
@@ -16,9 +16,9 @@ exports.list = async (req, res) => {
     `;
     let rawEmployees = [];
     if (currentUserRole === 'admin') {
-        rawEmployees = await db.prepare(`${sql} WHERE u.role IN ('employee', 'manager') ORDER BY u.role DESC, u.name ASC`).all();
+        rawEmployees = await db.prepare(`${sql} WHERE u.role IN ('employee', 'manager') AND (u.organization_id=? OR u.id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY u.role DESC, u.name ASC`).all(orgId, orgId);
     } else {
-        rawEmployees = await db.prepare(`${sql} WHERE u.role='employee' ORDER BY u.name ASC`).all();
+        rawEmployees = await db.prepare(`${sql} WHERE u.role='employee' AND (u.organization_id=? OR u.id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY u.name ASC`).all(orgId, orgId);
     }
     const employees = rawEmployees.map(e => ({
         ...e,
@@ -34,6 +34,7 @@ exports.save = async (req, res) => {
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
     const creatorRole = req.session.user.role;
+    const orgId = req.session.user.organization_id || 1;
 
     let targetRole = (role.toLowerCase() === 'manager' && creatorRole === 'admin') ? 'manager' : 'employee';
     if (!designation.trim()) {
@@ -88,8 +89,12 @@ exports.save = async (req, res) => {
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Updated`, cleanName);
         } else {
             if (!password) return res.status(400).render('error', { message: 'Password is required for new team member.' });
-            await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,department_id,designation_id,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)")
-                .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, deptName, desigName, deptId, desigId, req.session.user.id);
+            const result = await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,department_id,designation_id,created_by,organization_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+                .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, deptName, desigName, deptId, desigId, req.session.user.id, orgId);
+            const newUserId = result.lastInsertRowid;
+            try {
+                await db.prepare("INSERT IGNORE INTO user_organizations (user_id, organization_id, role) VALUES (?, ?, ?)").run(newUserId, orgId, targetRole);
+            } catch (e) {}
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Created`, cleanName);
         }
         res.redirect('/employees');
@@ -98,7 +103,6 @@ exports.save = async (req, res) => {
         res.status(400).render('error', { message: 'Could not save team member. Please make sure name and email are unique.' });
     }
 };
-
 
 exports.toggle = async (req, res) => {
     try {
@@ -141,7 +145,8 @@ exports.remove = async (req, res) => {
         const adminUser = await db.prepare("SELECT id FROM users WHERE role='admin' LIMIT 1").get();
         const fallbackAdminId = adminUser ? adminUser.id : req.session.user.id;
 
-        // 1. Clean up project_assignees and project_updates for this user
+        // 1. Clean up project_assignees, project_updates, user_organizations
+        try { await db.prepare('DELETE FROM user_organizations WHERE user_id=?').run(user.id); } catch(e){}
         try { await db.prepare('DELETE FROM project_assignees WHERE user_id=?').run(user.id); } catch(e){}
         try { await db.prepare('DELETE FROM project_updates WHERE manager_id=?').run(user.id); } catch(e){}
 

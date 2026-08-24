@@ -155,14 +155,25 @@
                         <textarea name="description" class="ck-editor-target" rows="3"></textarea>
                     </label>
 
-                    <% if (typeof employees !== 'undefined' && employees.length) { %>
+                    <% if ((typeof employees !== 'undefined' && employees.length) || (typeof managers !== 'undefined' && managers.length)) { %>
                     <label class="full">
-                        Assignee (Employee)
+                        Assignee
                         <select name="assigned_to" required>
-                            <option value="">Select Employee...</option>
-                            <% employees.forEach(e => { %>
-                                <option value="<%= e.id %>"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
-                            <% }) %>
+                            <option value="">Select Assignee...</option>
+                            <% if (typeof employees !== 'undefined' && employees.length) { %>
+                                <optgroup label="Employees">
+                                    <% employees.forEach(e => { %>
+                                        <option value="<%= e.id %>"><%= e.name %> (<%= e.designation || 'Employee' %>)</option>
+                                    <% }) %>
+                                </optgroup>
+                            <% } %>
+                            <% if (typeof managers !== 'undefined' && managers.length) { %>
+                                <optgroup label="Managers">
+                                    <% managers.forEach(m => { %>
+                                        <option value="<%= m.id %>"><%= m.name %> (<%= m.designation || 'Manager' %>)</option>
+                                    <% }) %>
+                                </optgroup>
+                            <% } %>
                         </select>
                     </label>
                     <% } %>
