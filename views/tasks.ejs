@@ -68,7 +68,7 @@
                     <div class="routine-card-top">
                         <div class="routine-card-info">
                             <b><%= r.title %></b>
-                            <small><%= r.project_name %><%= r.project_id ? ' (ID: #' + r.project_id + ')' : '' %> · <%= (r.description || '').replace(/<[^>]*>?/gm, '').trim() || 'Daily routine task' %></small>
+                            <small>#<%= r.id %> <%= r.project_name %> · <%= (r.description || '').replace(/<[^>]*>?/gm, '').trim() || 'Daily routine task' %></small>
 
                         </div>
                         <span class="status-chip <%= r.active ? 'in-progress' : 'cancelled' %>">
@@ -128,7 +128,7 @@
                     <h4><a href="/tasks/<%= rt.id %>"><%= rt.title %></a></h4>
                     <p><%= rt.description || 'Complete daily morning routine' %></p>
                     <div class="routine-card-footer">
-                        <small><i class="fa-solid fa-folder"></i> <%= rt.project_name || 'Project' %><%= rt.project_id ? ' (ID: #' + rt.project_id + ')' : '' %></small>
+                        <small><i class="fa-solid fa-folder"></i> #<%= rt.id %> <%= rt.project_name || 'Project' %></small>
                         <a href="/tasks/<%= rt.id %>" class="btn btn-sm primary">Start / Complete</a>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
                     </div>
 
                     <small style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; font-size: 13px; color: #3b68b7; font-weight: 600;">
-                        <%= t.project_name || 'No project' %><%= (t.project_id && String(t.project_name).toLowerCase() !== 'self task') ? ' (ID: #' + t.project_id + ')' : '' %>
+                        #<%= t.id %> <%= t.project_name || 'No project' %>
                     </small>
 
                 </div>

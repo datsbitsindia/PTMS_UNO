@@ -853,7 +853,7 @@ document.addEventListener('submit', async function(e) {
                                 </div>
                                 <div class="task-meta-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; margin-top: 5px; color: #475569;">
                                     <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Assigned By</small><b>${t.creator_name}</b></div>
-                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Project</small><b>${t.project_name}${t.project_id && String(t.project_name).toLowerCase() !== 'self task' ? ` (ID: #${t.project_id})` : ''}</b></div>
+                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Project</small><b>#${t.id} ${t.project_name}</b></div>
                                     <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Created On</small><b>${formatDateStr(t.created_at)}</b></div>
                                     <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Due Date</small><b>${formatDateStr(t.due_date)}</b></div>
                                 </div>

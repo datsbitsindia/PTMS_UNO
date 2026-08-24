@@ -39,7 +39,7 @@
                         <div>
                             <b style="font-size:15px; color:#0f172a; display:block; line-height:1.2;"><%= t.title %></b>
                             <small style="color:#64748b; font-size:11px; display:block; margin-top:2px;">
-                                <%= t.project_name || 'Project' %><%= (t.project_id && String(t.project_name).toLowerCase() !== 'self task') ? ' (ID: #' + t.project_id + ')' : '' %><% if(t.description){ %> · <%= t.description %><% } %>
+                                #<%= t.id %> <%= t.project_name || 'Project' %><% if(t.description){ %> · <%= t.description %><% } %>
                             </small>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
