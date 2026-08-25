@@ -1,7 +1,7 @@
 /* Floating AI Chat Button */
 .ai-fab {
     position: fixed;
-    bottom: 24px;
+    bottom: 80px;
     right: 24px;
     width: 56px;
     height: 56px;
@@ -27,7 +27,7 @@
 /* Chat Drawer Modal */
 .ai-chat-drawer {
     position: fixed;
-    bottom: 90px;
+    bottom: 145px;
     right: 24px;
     width: 380px;
     max-width: calc(100vw - 32px);
