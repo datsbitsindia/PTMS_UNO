@@ -62,7 +62,7 @@ exports.save = async (req, res) => {
         if (nameDuplicate) {
             const msg = `A user with the name "${cleanName}" already exists. Name must be unique.`;
             if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-                return res.status(400).json({ success: false, message: msg });
+                return res.json({ success: false, message: msg });
             }
             return res.status(400).render('error', { message: msg });
         }
@@ -75,7 +75,7 @@ exports.save = async (req, res) => {
         if (emailDuplicate) {
             const msg = `A user with the email "${cleanEmail}" already exists. Email must be unique.`;
             if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-                return res.status(400).json({ success: false, message: msg });
+                return res.json({ success: false, message: msg });
             }
             return res.status(400).render('error', { message: msg });
         }
@@ -84,13 +84,13 @@ exports.save = async (req, res) => {
             const existing = await db.prepare("SELECT * FROM users WHERE id=?").get(id);
             if (!existing) {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-                    return res.status(404).json({ success: false, message: 'User not found' });
+                    return res.json({ success: false, message: 'User not found' });
                 }
                 return res.status(404).render('error', { message: 'User not found' });
             }
             if (creatorRole !== 'admin' && existing.role !== 'employee') {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-                    return res.status(403).json({ success: false, message: 'Access denied.' });
+                    return res.json({ success: false, message: 'Access denied.' });
                 }
                 return res.status(403).render('error', { message: 'Access denied.' });
             }
@@ -106,7 +106,7 @@ exports.save = async (req, res) => {
         } else {
             if (!password) {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-                    return res.status(400).json({ success: false, message: 'Password is required for new team member.' });
+                    return res.json({ success: false, message: 'Password is required for new team member.' });
                 }
                 return res.status(400).render('error', { message: 'Password is required for new team member.' });
             }
@@ -127,7 +127,7 @@ exports.save = async (req, res) => {
         console.error('Error saving team member:', e);
         const msg = 'Could not save team member. Please make sure name and email are unique.';
         if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.status(400).json({ success: false, message: msg });
+            return res.json({ success: false, message: msg });
         }
         res.status(400).render('error', { message: msg });
     }
