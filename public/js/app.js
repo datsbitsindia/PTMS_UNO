@@ -621,6 +621,7 @@ window.showConfirmDialog = function(options = {}) {
         const closeBtn = modal.querySelector('.modal-close');
         if (closeBtn) closeBtn.addEventListener('click', onCancel);
         document.addEventListener('keydown', onKey);
+    });
 };
 
 // Global Custom Alert Modal Helper
