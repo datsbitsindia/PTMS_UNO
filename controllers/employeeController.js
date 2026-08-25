@@ -64,7 +64,7 @@ exports.save = async (req, res) => {
             if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
                 return res.json({ success: false, message: msg });
             }
-            return res.status(400).render('error', { message: msg });
+            return res.render('error', { message: msg });
         }
 
         // Check unique email across all users
@@ -77,7 +77,7 @@ exports.save = async (req, res) => {
             if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
                 return res.json({ success: false, message: msg });
             }
-            return res.status(400).render('error', { message: msg });
+            return res.render('error', { message: msg });
         }
 
         if (id) {
@@ -86,13 +86,13 @@ exports.save = async (req, res) => {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
                     return res.json({ success: false, message: 'User not found' });
                 }
-                return res.status(404).render('error', { message: 'User not found' });
+                return res.render('error', { message: 'User not found' });
             }
             if (creatorRole !== 'admin' && existing.role !== 'employee') {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
                     return res.json({ success: false, message: 'Access denied.' });
                 }
-                return res.status(403).render('error', { message: 'Access denied.' });
+                return res.render('error', { message: 'Access denied.' });
             }
 
             if (password) {
@@ -108,7 +108,7 @@ exports.save = async (req, res) => {
                 if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
                     return res.json({ success: false, message: 'Password is required for new team member.' });
                 }
-                return res.status(400).render('error', { message: 'Password is required for new team member.' });
+                return res.render('error', { message: 'Password is required for new team member.' });
             }
             const result = await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,department_id,designation_id,created_by,organization_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
                 .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, deptName, desigName, deptId, desigId, req.session.user.id, orgId);
@@ -129,7 +129,7 @@ exports.save = async (req, res) => {
         if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
             return res.json({ success: false, message: msg });
         }
-        res.status(400).render('error', { message: msg });
+        res.render('error', { message: msg });
     }
 };
 
