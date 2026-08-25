@@ -94,6 +94,15 @@ async function start() {
     });
     webApp.use(require('./routes/audit'));
     webApp.use('/api/chat', require('./routes/aiRoutes'));
+    
+    // Prevent aggressive caching of EJS/HTML pages in WebViews/browsers
+    webApp.use((req, res, next) => {
+        if (req.method === 'GET' && (!req.xhr && req.headers.accept?.includes('text/html'))) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        }
+        next();
+    });
+
     webApp.use(require('./routes'));
     webApp.use((req, res) => res.status(404).render('error', {
         message: 'Page not found'
