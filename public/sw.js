@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taskmanager-v8';
+const CACHE_NAME = 'taskmanager-v9';
 const STATIC_ASSETS = [
   '/',
   '/css/style.css',
