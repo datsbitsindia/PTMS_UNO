@@ -60,7 +60,11 @@ exports.save = async (req, res) => {
             : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(name)) = LOWER(?)").get(cleanName.toLowerCase());
 
         if (nameDuplicate) {
-            return res.status(400).render('error', { message: `A user with the name "${cleanName}" already exists. Name must be unique.` });
+            const msg = `A user with the name "${cleanName}" already exists. Name must be unique.`;
+            if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                return res.status(400).json({ success: false, message: msg });
+            }
+            return res.status(400).render('error', { message: msg });
         }
 
         // Check unique email across all users
@@ -69,13 +73,25 @@ exports.save = async (req, res) => {
             : await db.prepare("SELECT id FROM users WHERE LOWER(TRIM(email)) = LOWER(?)").get(cleanEmail);
 
         if (emailDuplicate) {
-            return res.status(400).render('error', { message: `A user with the email "${cleanEmail}" already exists. Email must be unique.` });
+            const msg = `A user with the email "${cleanEmail}" already exists. Email must be unique.`;
+            if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                return res.status(400).json({ success: false, message: msg });
+            }
+            return res.status(400).render('error', { message: msg });
         }
 
         if (id) {
             const existing = await db.prepare("SELECT * FROM users WHERE id=?").get(id);
-            if (!existing) return res.status(404).render('error', { message: 'User not found' });
+            if (!existing) {
+                if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                    return res.status(404).json({ success: false, message: 'User not found' });
+                }
+                return res.status(404).render('error', { message: 'User not found' });
+            }
             if (creatorRole !== 'admin' && existing.role !== 'employee') {
+                if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                    return res.status(403).json({ success: false, message: 'Access denied.' });
+                }
                 return res.status(403).render('error', { message: 'Access denied.' });
             }
 
@@ -88,7 +104,12 @@ exports.save = async (req, res) => {
             }
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Updated`, cleanName);
         } else {
-            if (!password) return res.status(400).render('error', { message: 'Password is required for new team member.' });
+            if (!password) {
+                if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+                    return res.status(400).json({ success: false, message: 'Password is required for new team member.' });
+                }
+                return res.status(400).render('error', { message: 'Password is required for new team member.' });
+            }
             const result = await db.prepare("INSERT INTO users(role,name,email,password,phone,department,designation,department_id,designation_id,created_by,organization_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
                 .run(targetRole, cleanName, cleanEmail, await bcrypt.hash(password, 12), phone, deptName, desigName, deptId, desigId, req.session.user.id, orgId);
             const newUserId = result.lastInsertRowid;
@@ -97,10 +118,18 @@ exports.save = async (req, res) => {
             } catch (e) {}
             await activity.log(req.session.user.id, `${targetRole === 'manager' ? 'Manager' : 'Employee'} Created`, cleanName);
         }
+        
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({ success: true });
+        }
         res.redirect('/employees');
     } catch (e) {
         console.error('Error saving team member:', e);
-        res.status(400).render('error', { message: 'Could not save team member. Please make sure name and email are unique.' });
+        const msg = 'Could not save team member. Please make sure name and email are unique.';
+        if (req.xhr || req.headers.accept?.includes('json') || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(400).json({ success: false, message: msg });
+        }
+        res.status(400).render('error', { message: msg });
     }
 };
 

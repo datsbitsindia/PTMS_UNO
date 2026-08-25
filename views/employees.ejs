@@ -156,6 +156,79 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Intercept Add/Edit Team Member form submission to handle validation errors in-page using the custom alert modal
+    const empForm = document.getElementById('employee-form');
+    if (empForm) {
+        empForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const body = new URLSearchParams(formData);
+            const submitBtn = this.querySelector('button[type="submit"]') || this.querySelector('.btn.primary');
+            const originalBtnText = submitBtn ? submitBtn.textContent : 'Save Team Member';
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
+            }
+            
+            try {
+                const res = await fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: body
+                });
+                
+                // If the response is a redirect (e.g. success redirects to /employees), we follow it
+                if (res.redirected) {
+                    window.location.href = res.url;
+                    return;
+                }
+                
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalBtnText;
+                    }
+                    // Show validation error in our custom alert modal
+                    if (window.showAlertDialog) {
+                        await window.showAlertDialog({
+                            title: 'Validation Failed',
+                            message: data.message || 'Could not save team member.',
+                            confirmText: 'OK'
+                        });
+                    } else {
+                        alert(data.message || 'Could not save team member.');
+                    }
+                }
+            } catch (err) {
+                console.error('Save team member error:', err);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalBtnText;
+                }
+                
+                // Try to fallback to generic warning popup if response was HTML or network failed
+                if (window.showAlertDialog) {
+                    await window.showAlertDialog({
+                        title: 'Validation Error',
+                        message: 'A team member with this email or name already exists in the organization.',
+                        confirmText: 'OK'
+                    });
+                } else {
+                    alert('A team member with this email or name already exists in the organization.');
+                }
+            }
+        });
+    }
+
     // Intercept Delete forms for no-reload deletion with custom confirm modal
     document.querySelectorAll('form[action*="/delete"]').forEach(form => {
         form.addEventListener('submit', async function(e) {

@@ -621,8 +621,79 @@ window.showConfirmDialog = function(options = {}) {
         const closeBtn = modal.querySelector('.modal-close');
         if (closeBtn) closeBtn.addEventListener('click', onCancel);
         document.addEventListener('keydown', onKey);
+};
+
+// Global Custom Alert Modal Helper
+window.showAlertDialog = function(options = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('global-confirm-modal');
+        if (!modal) {
+            alert(options.message || 'Alert');
+            resolve();
+            return;
+        }
+
+        const titleEl = document.getElementById('confirm-modal-title');
+        const msgEl = document.getElementById('confirm-modal-message');
+        const okBtn = document.getElementById('confirm-modal-ok-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        const iconDiv = document.getElementById('confirm-modal-icon');
+        const iconI = document.getElementById('confirm-modal-icon-i');
+
+        if (titleEl) titleEl.textContent = options.title || 'Validation Error';
+        if (msgEl) msgEl.textContent = options.message || 'An error occurred.';
+
+        if (okBtn) {
+            okBtn.textContent = options.confirmText || 'OK';
+            okBtn.className = 'btn primary';
+        }
+
+        if (cancelBtn) {
+            cancelBtn.style.display = 'none';
+        }
+
+        if (iconDiv && iconI) {
+            iconDiv.className = 'confirm-modal-icon warning';
+            iconI.className = 'fa-solid fa-triangle-exclamation';
+        }
+
+        modal.classList.add('open');
+        modal.classList.add('active');
+
+        function cleanup() {
+            modal.classList.remove('open');
+            modal.classList.remove('active');
+            if (cancelBtn) cancelBtn.style.display = '';
+            if (okBtn) okBtn.removeEventListener('click', onOk);
+            const closeBtn = modal.querySelector('.modal-close');
+            if (closeBtn) closeBtn.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKey);
+            resolve();
+        }
+
+        function onOk(e) {
+            e.preventDefault();
+            cleanup();
+        }
+
+        function onCancel(e) {
+            e.preventDefault();
+            cleanup();
+        }
+
+        function onKey(e) {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+                cleanup();
+            }
+        }
+
+        if (okBtn) okBtn.addEventListener('click', onOk);
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) closeBtn.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKey);
     });
 };
+
 
 // Global Form Submit Interceptor to show custom in-app confirmation modal instead of browser alert/confirm
 document.addEventListener('submit', async function(e) {
