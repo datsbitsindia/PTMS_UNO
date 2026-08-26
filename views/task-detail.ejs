@@ -11,15 +11,9 @@
         <a href="/tasks" class="back-link" style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#475569; text-decoration:none; margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Back to Tasks</a>
         <div class="task-title-group">
             <h2><%= task.title %></h2>
-            <span class="project-tag" style="font-size:13px; color:#3b68b7; font-weight:600;"><i class="fa-solid fa-folder-open"></i> #<%= task.task_number || task.id %> <%= task.project_name||'No project' %></span>
+            <span class="project-tag" style="font-size:13px; color:#3b68b7; font-weight:600;"><i class="fa-solid fa-folder-open"></i> <%= task.project_name||'No project' %></span>
         </div>
         <div class="task-action-row">
-            <% if (task.is_self_task || String(task.project_name).toLowerCase() === 'self task' || Number(task.created_by) === Number(task.assigned_to)) { %>
-                <span class="task-action-pill" style="background:#e0e7ff;color:#4338ca;border-color:#c7d2fe;font-weight:700;">
-                    <i class="fa-solid fa-user-check"></i> Self Task
-                </span>
-            <% } %>
-            <span class="task-action-pill priority-pill <%= task.priority.toLowerCase() %>"><%= task.priority %> Priority</span>
             <% if (task.is_forwarded) { %>
                 <span class="task-action-pill forwarded-pill" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd;">
                     <i class="fa-solid fa-share"></i> Forwarded
@@ -55,9 +49,27 @@
 
     <div class="task-info-grid">
         <div><small>Assigned By</small><b><%= task.creator_name %></b></div>
-        <div><small>Current Assignees</small><b><%= task.assigned_name %></b></div>
+        <div><small>Assigned To</small><b><%= task.assigned_name %></b></div>
         <div><small>Due Date</small><b><%= formatDate(task.due_date) %></b></div>
-        <div><small>Overall Status</small><span class="status-chip <%= task.status.toLowerCase().replaceAll(' ','-') %>"><%= task.status %></span></div>
+        <div>
+            <small>Priority</small>
+            <%
+              let pBg = '#f1f5f9', pText = '#475569', pBorder = '#cbd5e1';
+              const pVal = (task.priority || '').toLowerCase();
+              if (pVal === 'medium') {
+                  pBg = '#e0f2fe'; pText = '#0369a1'; pBorder = '#bae6fd';
+              } else if (pVal === 'high') {
+                  pBg = '#fef3c7'; pText = '#b45309'; pBorder = '#fde68a';
+              } else if (pVal === 'critical') {
+                  pBg = '#fee2e2'; pText = '#b91c1c'; pBorder = '#fecaca';
+              }
+            %>
+            <div style="margin-top: 2px;">
+                <span style="display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; background: <%= pBg %>; color: <%= pText %>; border: 1px solid <%= pBorder %>; margin: 0 !important;">
+                    <%= task.priority %>
+                </span>
+            </div>
+        </div>
     </div>
 
     <% if (typeof taskAssignees !== 'undefined' && taskAssignees.length > 0) { %>

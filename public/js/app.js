@@ -245,6 +245,15 @@ window.applyCompactFilter = function(bar) {
             card.removeAttribute('hidden');
             card.hidden = false;
             visible++;
+
+            const statusPill = card.querySelector('.task-status-pill');
+            if (statusPill) {
+                if (!activeKpi || activeKpi === 'all') {
+                    statusPill.style.setProperty('display', '', '');
+                } else {
+                    statusPill.style.setProperty('display', 'none', 'important');
+                }
+            }
         } else {
             card.style.setProperty('display', 'none', 'important');
             card.setAttribute('hidden', 'true');
@@ -903,7 +912,7 @@ document.addEventListener('submit', async function(e) {
                             <div class="entity-title">
                                 <div class="task-title-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; width: 100%;">
                                     <a href="/tasks/${t.id}" style="font-weight: 800; font-size: 14px; color: #0f172a; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 40px;">
-                                        ${t.title}
+                                        #${t.task_number || t.id} ${t.title}
                                     </a>
                                     ${t.is_routine ? '<span class="routine-badge" style="flex:0 0 auto; margin:0!important;"><i class="fa-solid fa-repeat"></i> Routine</span>' : ''}
                                     ${t.isPureSelf ? `
@@ -919,16 +928,29 @@ document.addEventListener('submit', async function(e) {
                                             <i class="fa-solid fa-share"></i> Forwarded
                                         </span>
                                     ` : ''}
-                                    <span class="status-chip ${t.is_overdue ? 'overdue' : String(t.status || 'Pending').toLowerCase().replaceAll(' ', '-')}" style="flex:0 0 auto; font-size:9px; padding:2px 6px; margin:0!important;">
+                                    <span class="status-chip task-status-pill ${t.is_overdue ? 'overdue' : String(t.status || 'Pending').toLowerCase().replaceAll(' ', '-')}" style="flex:0 0 auto; font-size:9px; padding:2px 6px; margin:0!important;">
                                         ${t.is_overdue ? 'Overdue' : t.status}
                                     </span>
                                 </div>
-                                <div class="task-meta-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; margin-top: 5px; color: #475569;">
-                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Assigned By</small><b>${t.creator_name}</b></div>
-                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Project</small><b>#${t.id} ${t.project_name}</b></div>
-                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Created On</small><b>${formatDateStr(t.created_at)}</b></div>
-                                    <div><small style="font-size: 9px; color: #94a3b8; display: block; text-transform: uppercase;">Due Date</small><b>${formatDateStr(t.due_date)}</b></div>
-                                </div>
+                                <small style="display: block; color: #3b68b7; font-weight: 600; margin-top: 2px; font-size: 11px;">
+                                    <i class="fa-solid fa-folder-open" style="margin-right: 3px;"></i>${t.project_name || 'No project'}
+                                </small>
+                            </div>
+                            <div class="entity-meta">
+                                <small>Assigned By</small>
+                                <b>${t.creator_name || 'You'}</b>
+                            </div>
+                            <div class="entity-meta">
+                                <small>Assigned To</small>
+                                <b>${t.assigned_name || 'You'}</b>
+                            </div>
+                            <div class="entity-meta">
+                                <small>Assigned on</small>
+                                <b>${formatDateStr(t.created_at)}</b>
+                            </div>
+                            <div class="entity-meta" style="text-align: right;">
+                                <small>Due date</small>
+                                <b>${formatDateStr(t.due_date)}</b>
                             </div>
                         `;
 

@@ -19,10 +19,10 @@
 
 <div class="metric-grid task-kpis five">
 
-    <div class="metric-card" onclick="filterByKpi('all', event)" title="Click to show all tasks">
-        <i class="fa-solid fa-list-check"></i>
-        <b><%= tasks.length %></b>
-        <span>Total Tasks</span>
+    <div class="metric-card red" onclick="filterByKpi('Overdue', event)" title="Click to filter Overdue tasks">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <b><%= overdueCount %></b>
+        <span>Overdue</span>
     </div>
 
     <div class="metric-card orange" onclick="filterByKpi('Pending', event)" title="Click to filter Pending tasks">
@@ -43,10 +43,10 @@
         <span>Completed</span>
     </div>
 
-    <div class="metric-card red" onclick="filterByKpi('Overdue', event)" title="Click to filter Overdue tasks">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <b><%= overdueCount %></b>
-        <span>Overdue</span>
+    <div class="metric-card" onclick="filterByKpi('all', event)" title="Click to show all tasks">
+        <i class="fa-solid fa-list-check"></i>
+        <b><%= tasks.length %></b>
+        <span>Total Tasks</span>
     </div>
 
 </div>
@@ -221,7 +221,7 @@
                     <div class="task-title-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; width: 100%;">
 
                         <a href="/tasks/<%= t.id %>" style="font-weight: 800; font-size: 14px; color: #0f172a; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 40px;">
-                            <%= t.title %>
+                            #<%= t.task_number || t.id %> <%= t.title %>
                         </a>
 
                         <% if (t.is_routine) { %>
@@ -245,7 +245,7 @@
                         <% } %>
 
                         <span
-                            class="status-chip <%= 
+                            class="status-chip task-status-pill <%= 
                                 t.is_overdue
                                     ? 'overdue'
                                     : t.status.toLowerCase().replaceAll(' ', '-')
@@ -257,8 +257,8 @@
 
                     </div>
 
-                    <small style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; font-size: 13px; color: #3b68b7; font-weight: 600;">
-                        #<%= t.task_number || t.id %> <%= t.project_name || 'No project' %>
+                    <small style="display: block; color: #3b68b7; font-weight: 600; margin-top: 2px; font-size: 11px;">
+                        <i class="fa-solid fa-folder-open" style="margin-right: 3px;"></i><%= t.project_name || 'No project' %>
                     </small>
 
                 </div>
@@ -278,7 +278,7 @@
                     <b><%= formatDate(t.created_at) %></b>
                 </div>
 
-                <div class="entity-meta">
+                <div class="entity-meta" style="text-align: right;">
                     <small>Due date</small>
                     <b><%= formatDate(t.due_date) %></b>
                 </div>

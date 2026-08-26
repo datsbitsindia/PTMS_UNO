@@ -408,8 +408,100 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Toggle Chat Drawer
-    toggleBtn.addEventListener('click', () => {
+    // Toggle Chat Drawer & Make Button Draggable
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+    let hasMoved = false;
+
+    function dragStart(e) {
+        if (e.type === 'touchstart') {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        } else {
+            startX = e.clientX;
+            startY = e.clientY;
+        }
+
+        const rect = toggleBtn.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        
+        hasMoved = false;
+        isDragging = true;
+
+        document.addEventListener('mousemove', dragMove, { passive: false });
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchmove', dragMove, { passive: false });
+        document.addEventListener('touchend', dragEnd);
+    }
+
+    function dragMove(e) {
+        if (!isDragging) return;
+        
+        let clientX, clientY;
+        if (e.type === 'touchmove') {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+            hasMoved = true;
+        }
+
+        if (hasMoved) {
+            if (e.cancelable) e.preventDefault();
+
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+
+            const padding = 10;
+            const btnWidth = toggleBtn.offsetWidth;
+            const btnHeight = toggleBtn.offsetHeight;
+            const maxX = window.innerWidth - btnWidth - padding;
+            const maxY = window.innerHeight - btnHeight - padding;
+
+            newLeft = Math.max(padding, Math.min(newLeft, maxX));
+            newTop = Math.max(padding, Math.min(newTop, maxY));
+
+            toggleBtn.style.right = 'auto';
+            toggleBtn.style.bottom = 'auto';
+            toggleBtn.style.left = newLeft + 'px';
+            toggleBtn.style.top = newTop + 'px';
+        }
+    }
+
+    function dragEnd(e) {
+        if (!isDragging) return;
+        
+        setTimeout(() => {
+            isDragging = false;
+        }, 50);
+
+        document.removeEventListener('mousemove', dragMove);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchmove', dragMove);
+        document.removeEventListener('touchend', dragEnd);
+    }
+
+    toggleBtn.addEventListener('mousedown', dragStart);
+    toggleBtn.addEventListener('touchstart', dragStart, { passive: true });
+
+    // Native click event to toggle chat (only fires if button wasn't dragged)
+    toggleBtn.addEventListener('click', (e) => {
+        if (hasMoved) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         drawer.classList.toggle('active');
         if (drawer.classList.contains('active')) {
             loadChatHistory();
