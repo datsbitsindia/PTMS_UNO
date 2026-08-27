@@ -351,11 +351,11 @@ def create_new_task(title: str, user_id: int, description: Optional[str] = None,
         col_row_s = cursor.fetchone()
         is_int_status = col_row_s and "int" in str(col_row_s["Type"]).lower()
 
-        # Handle title truncation (150 chars limit)
+        # Handle title truncation (100 chars limit)
         final_title = title
         final_description = description or title
-        if len(title) > 150:
-            final_title = title[:147] + "..."
+        if len(title) > 100:
+            final_title = title[:97] + "..."
             final_description = f"Full Title: {title}\n\n{final_description}"
 
         p_str = (priority or "Medium").strip()
