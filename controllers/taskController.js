@@ -154,9 +154,9 @@ const statusRank = (statusStr) => {
 exports.detail = async (req, res) => {
     const orgId = req.session.user.organization_id || 1;
     const task = await db.prepare(baseQuery + ' WHERE t.id=? AND t.organization_id=?').get(req.session.user.id, req.params.id, orgId);
-    if (!task || !(await canView(req.session.user, task))) return res.status(404).render('error', {
-        message: 'Task not found'
-    });
+    if (!task || !(await canView(req.session.user, task))) {
+        return res.redirect('/tasks?error=deleted');
+    }
     const comments = await db.prepare('SELECT c.*,u.name FROM comments c JOIN users u ON u.id=c.user_id WHERE task_id=? ORDER BY c.created_at').all(task.id);
     const attachments = await db.prepare('SELECT * FROM attachments WHERE task_id=? ORDER BY created_at DESC').all(task.id);
     const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);

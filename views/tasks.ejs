@@ -317,6 +317,27 @@ document.addEventListener('DOMContentLoaded', function() {
             window.filterByKpi(statusParam || 'Pending');
         }
     }, 50);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'deleted') {
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        
+        if (window.showConfirmDialog) {
+            window.showConfirmDialog({
+                title: 'Task Deleted',
+                message: 'Task was deleted',
+                confirmText: 'OK',
+                danger: true
+            }).then(() => {
+                if (cancelBtn) cancelBtn.style.display = '';
+            });
+        } else {
+            alert('Task was deleted');
+        }
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+    }
 });
 </script>
 
