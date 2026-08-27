@@ -952,7 +952,7 @@ body.dark .user-pill {
     }
 }
 
-/* Task Type Tabs (To Do vs Assigned) - Original Colors with Active Border Highlight */
+/* Task Type Tabs (To Do vs Assigned) - Unified Matching Glass Theme */
 .task-tab-btn {
     height: 38px !important;
     padding: 0 12px !important;
@@ -963,44 +963,38 @@ body.dark .user-pill {
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    color: #475569 !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    opacity: 0.85 !important;
 }
 
-/* To Do Tab Base (Original Light Blue) */
-.task-tab-btn[data-task-tab="assigned-to-me"] {
-    background: #eff6ff !important;
-    color: #1d4ed8 !important;
-    border: 1.5px solid #bfdbfe !important;
-    box-shadow: none !important;
-    opacity: 0.7 !important;
+.task-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.85) !important;
+    color: #0f172a !important;
+    opacity: 1 !important;
 }
 
-/* To Do Tab Active (Bold Border & Ring Shadow) */
-.task-tab-btn[data-task-tab="assigned-to-me"].active {
-    border: 2px solid #2563eb !important;
-    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.25), 0 3px 10px rgba(37, 99, 235, 0.15) !important;
+/* Active State for Tabs (Light Blue Glass Accent matching app theme) */
+.task-tab-btn.active {
+    background: #d3e3fd !important;
+    color: #0b2d68 !important;
+    border: 1.5px solid #3b68b7 !important;
+    box-shadow: 0 3px 12px rgba(59, 104, 183, 0.18) !important;
     opacity: 1 !important;
     font-weight: 800 !important;
 }
 
-/* Assigned Tab Base (Original Light Yellow) */
-.task-tab-btn[data-task-tab="assigned-by-me"] {
-    background: #fefce8 !important;
-    color: #a16207 !important;
-    border: 1.5px solid #fef08a !important;
-    box-shadow: none !important;
-    opacity: 0.7 !important;
+.task-tab-btn.active i {
+    color: #3b68b7 !important;
 }
 
-/* Assigned Tab Active (Bold Border & Ring Shadow) */
-.task-tab-btn[data-task-tab="assigned-by-me"].active {
-    border: 2px solid #d97706 !important;
-    box-shadow: 0 0 0 3.5px rgba(217, 119, 6, 0.25), 0 3px 10px rgba(217, 119, 6, 0.15) !important;
-    opacity: 1 !important;
-    font-weight: 800 !important;
-}
+
 
 /* Eye-Catching Red Notification Badge Dot Styling (Mobile & Desktop) */
 a[href="/notifications"] {

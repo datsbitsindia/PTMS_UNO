@@ -67,8 +67,8 @@
   .sidebar nav a i{width:auto;margin:0;font-size:17px;color:#5c6e8c!important;transition:all .2s ease}
   .sidebar nav a:hover{color:#0b1d3a!important;background:#edf2fa!important}
   .sidebar nav a:hover i{color:#3b68b7!important}
-  .sidebar nav a.active{background:#d3e3fd!important;color:#0b2d68!important;font-weight:800!important;box-shadow:inset 0 3px 0 #3b68b7!important}
-  .sidebar nav a.active i{color:#3b68b7!important}
+  .sidebar nav a.active{background:rgba(37,99,235,0.12)!important;color:#1d4ed8!important;font-weight:700!important;border-radius:14px!important;box-shadow:none!important}
+  .sidebar nav a.active i{color:#1d4ed8!important}
   .sidebar .badge{position:absolute;top:5px;right:8px;float:none;height:17px;min-width:17px;line-height:17px;padding:0 4px}
   .notification-list a,.files a{padding:13px 4px}
 }
@@ -849,11 +849,209 @@ html body .entity-card.manager-card .row-actions {
         margin-left: 4px !important;
         margin-right: 4px !important;
     }
-    html body .topbar {
-        padding-left: 12px !important;
-        padding-right: 12px !important;
+
+/* ==========================================================================
+   GLASSMORPHISM THEME & MOBILE RESPONSIVE ENHANCEMENTS
+   ========================================================================== */
+
+/* Modern Ambient Mesh Glass Background */
+body {
+    background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.14) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(147, 197, 253, 0.18) 0px, transparent 50%),
+                #eef3fa !important;
+    background-attachment: fixed !important;
+}
+
+/* Glass Panels, Cards, Stats, Modals & Metric Cards */
+.panel,
+.stat,
+.metric-card,
+.ui-panel,
+.entity-card,
+.login-card,
+.modal-card,
+.task-detail-card,
+.project-hero {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.65) !important;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+    border-radius: 16px !important;
+}
+
+/* Glass Topbar Header */
+.topbar {
+    background: rgba(224, 237, 255, 0.75) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+    box-shadow: 0 4px 20px rgba(11, 45, 104, 0.06) !important;
+}
+
+/* Glass Desktop Sidebar (> 900px) */
+@media (min-width: 901px) {
+    .sidebar {
+        background: linear-gradient(180deg, rgba(21, 39, 68, 0.92) 0%, rgba(15, 27, 48, 0.95) 100%) !important;
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 6px 0 28px rgba(0, 0, 0, 0.08) !important;
+    }
+    .sidebar nav a.active {
+        background: rgba(255, 255, 255, 0.18) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
     }
 }
+
+/* Modern Floating Glass Mobile Navigation Dock (<= 900px) */
+@media (max-width: 900px) {
+    .sidebar {
+        position: fixed !important;
+        inset: auto 12px calc(10px + env(safe-area-inset-bottom)) 12px !important;
+        width: calc(100% - 24px) !important;
+        height: 60px !important;
+        padding: 4px !important;
+        background: rgba(255, 255, 255, 0.78) !important;
+        backdrop-filter: blur(25px) saturate(200%) !important;
+        -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.9) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+        z-index: 9999 !important;
+        overflow: hidden !important;
+    }
+    .sidebar .brand {
+        display: none !important;
+    }
+    .sidebar nav {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-around !important;
+        gap: 4px !important;
+        padding: 0 2px !important;
+    }
+    .sidebar nav a {
+        position: relative !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        height: 52px !important;
+        padding: 5px 2px !important;
+        border-radius: 14px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 3px !important;
+        color: #64748b !important;
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    .sidebar nav a i {
+        font-size: 18px !important;
+        color: #64748b !important;
+        transition: transform 0.2s ease, color 0.2s ease !important;
+    }
+    .sidebar nav a:hover {
+        color: #0f172a !important;
+        background: rgba(59, 104, 183, 0.08) !important;
+    }
+    .sidebar nav a.active {
+        background: rgba(37, 99, 235, 0.12) !important;
+        color: #1d4ed8 !important;
+        font-weight: 700 !important;
+        box-shadow: none !important;
+    }
+    .sidebar nav a.active i {
+        color: #1d4ed8 !important;
+        transform: translateY(-1px) scale(1.1) !important;
+    }
+    .sidebar nav a.active::after {
+        content: "" !important;
+        position: absolute !important;
+        bottom: 3px !important;
+        width: 4px !important;
+        height: 4px !important;
+        border-radius: 50% !important;
+        background: #1d4ed8 !important;
+    }
+}
+
+
+/* Glass Interactive Buttons & Inputs */
+.btn {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, #3b68b7 0%, #2563eb 100%) !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.btn.primary:hover {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Glass Inputs & Form Fields */
+html body input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not(.note-title-field),
+html body select,
+html body textarea {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(203, 213, 225, 0.8) !important;
+    border-radius: 12px !important;
+    transition: all 0.2s ease !important;
+}
+
+html body input:focus,
+html body select:focus,
+html body textarea:focus {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: #3b68b7 !important;
+    box-shadow: 0 0 0 3px rgba(59, 104, 183, 0.18) !important;
+}
+
+/* Mobile Display Hardening & Micro-Touch Improvements */
+@media (max-width: 600px) {
+    .page-head {
+        border-radius: 16px !important;
+        padding: 16px 14px !important;
+        background: linear-gradient(135deg, rgba(43, 87, 154, 0.92), rgba(59, 130, 246, 0.95)) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+    }
+    .modal-card {
+        border-radius: 24px 24px 0 0 !important;
+        backdrop-filter: blur(24px) saturate(190%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+    }
+    .stats {
+        gap: 8px !important;
+    }
+    .stat {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .filters {
+        border-radius: 14px !important;
+        padding: 10px !important;
+    }
+}
+
 
 
 
