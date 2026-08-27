@@ -342,17 +342,45 @@ def create_new_task(title: str, user_id: int, description: Optional[str] = None,
                     "error": f"Project '{project_name}' does not exist in database. Active available projects are: {', '.join(p_names) if p_names else 'Self Task'}. Please specify a valid active project or omit project_name."
                 }
 
-        p_str = (priority or "Medium").lower()
-        p_num = PRIORITY_STR_TO_NUM.get(p_str, 1)
+        # Dynamic checks for column types in tasks table
+        cursor.execute(f"SHOW COLUMNS FROM `{t_tbl}` LIKE 'priority'")
+        col_row_p = cursor.fetchone()
+        is_int_priority = col_row_p and "int" in str(col_row_p["Type"]).lower()
+
+        cursor.execute(f"SHOW COLUMNS FROM `{t_tbl}` LIKE 'status'")
+        col_row_s = cursor.fetchone()
+        is_int_status = col_row_s and "int" in str(col_row_s["Type"]).lower()
+
+        # Handle title truncation (150 chars limit)
+        final_title = title
+        final_description = description or title
+        if len(title) > 150:
+            final_title = title[:147] + "..."
+            final_description = f"Full Title: {title}\n\n{final_description}"
+
+        p_str = (priority or "Medium").strip()
+        p_map = {
+            'low': 'Low',
+            'medium': 'Medium',
+            'high': 'High',
+            'critical': 'Critical'
+        }
+        p_norm = p_map.get(p_str.lower(), 'Medium')
+        p_num = PRIORITY_STR_TO_NUM.get(p_str.lower(), 1)
+
+        p_val = p_num if is_int_priority else p_norm
+        s_val = 0 if is_int_status else 'Pending'
 
         query = f"""INSERT INTO `{t_tbl}` (title, description, priority, priority_id, status, status_id, due_date, created_by, assigned_to, project_id)
-                   VALUES (%s, %s, %s, %s, 0, 0, %s, %s, %s, %s)"""
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         
         cursor.execute(query, (
-            title,
-            description or title,
+            final_title,
+            final_description,
+            p_val,
             p_num,
-            p_num,
+            s_val,
+            0,
             due_date,
             user_id,
             str(assigned_user_id),
@@ -400,8 +428,27 @@ def update_task_status(task_id: int, user_id: int, user_role: str = "user", stat
                 "error": f"Permission Denied: Only assigned team members or Admin can change status of Task #{task_id} ('{task['title']}'). As a Manager/Creator, you can reassign, edit details, delete, or comment on this task."
             }
 
-        s_str = (status or "Completed").lower()
-        s_num = STATUS_STR_TO_NUM.get(s_str, 2)
+        # Dynamic checks for column types in tasks and task_assignees tables
+        cursor.execute(f"SHOW COLUMNS FROM `{t_tbl}` LIKE 'status'")
+        col_row_s = cursor.fetchone()
+        is_int_status = col_row_s and "int" in str(col_row_s["Type"]).lower()
+
+        cursor.execute(f"SHOW COLUMNS FROM `{a_tbl}` LIKE 'status'")
+        col_row_sa = cursor.fetchone()
+        is_int_status_a = col_row_sa and "int" in str(col_row_sa["Type"]).lower()
+
+        s_str = (status or "Completed").strip()
+        s_map = {
+            'pending': 'Pending',
+            'in progress': 'In Progress',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
+        }
+        s_norm = s_map.get(s_str.lower(), 'Completed')
+        s_num = STATUS_STR_TO_NUM.get(s_str.lower(), 2)
+
+        s_val = s_num if is_int_status else s_norm
+        s_val_a = s_num if is_int_status_a else s_norm
 
         # Update specific assignee in task_assignees junction table
         try:
@@ -409,13 +456,13 @@ def update_task_status(task_id: int, user_id: int, user_role: str = "user", stat
                 INSERT INTO `{a_tbl}` (task_id, user_id, status, status_id, completed_at)
                 VALUES (%s, %s, %s, %s, CASE WHEN %s = 2 THEN NOW() ELSE NULL END)
                 ON DUPLICATE KEY UPDATE status = %s, status_id = %s, completed_at = CASE WHEN %s = 2 THEN NOW() ELSE NULL END
-            """, (task_id, user_id, s_num, s_num, s_num, s_num, s_num, s_num))
+            """, (task_id, user_id, s_val_a, s_num, s_num, s_val_a, s_num, s_num))
         except Exception as e:
             print("task_assignees status update warning:", e)
 
         # Update overall tasks table
         cursor.execute(f"UPDATE `{t_tbl}` SET status = %s, status_id = %s, completed_at = CASE WHEN %s = 2 THEN NOW() ELSE NULL END, updated_by = %s WHERE id = %s", 
-                       (s_num, s_num, s_num, user_id, task_id))
+                       (s_val, s_num, s_num, user_id, task_id))
         conn.commit()
 
         return {
