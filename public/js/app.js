@@ -195,20 +195,33 @@ window.applyCompactFilter = function(bar) {
 
         const checkStatusMatch = (target) => {
             if (!target) return true;
-            const cleanTarget = target.replaceAll(' ', '-').toLowerCase();
-            if (cleanTarget === 'overdue') {
-                return isOverdue || cardStatus === 'overdue';
+            const targetLower = String(target).toLowerCase().trim();
+            const targetClean = targetLower.replaceAll(' ', '-');
+            const targetSpace = targetLower.replaceAll('-', ' ');
+            const cardStatusLower = cardStatus.toLowerCase().trim();
+            const cardStatusClean = cardStatusLower.replaceAll(' ', '-');
+            const cardStatusSpace = cardStatusLower.replaceAll('-', ' ');
+
+            if (targetClean === 'overdue' || targetLower === 'overdue') {
+                return isOverdue || cardStatusLower === 'overdue';
             }
-            if (cleanTarget.includes('forwarded')) {
+            if (targetClean.includes('forwarded') || targetLower.includes('forwarded')) {
                 return isForwarded;
             }
-            if (cleanTarget === 'pending') {
-                return cardStatus === 'pending' || cardStatus === 'planned';
+            if (targetLower === 'pending') {
+                return cardStatusLower === 'pending' || cardStatusLower === 'planned' || cardStatusClean === 'in-progress' || cardStatusLower === 'in progress';
             }
-            if (cardStatus) {
-                return cardStatus === cleanTarget || cardStatus.includes(cleanTarget) || text.includes(cleanTarget);
+            if (cardStatusLower) {
+                return cardStatusLower === targetLower || 
+                       cardStatusClean === targetClean || 
+                       cardStatusLower === targetSpace || 
+                       cardStatusSpace === targetLower ||
+                       cardStatusLower.includes(targetLower) || 
+                       cardStatusClean.includes(targetClean) || 
+                       text.includes(targetLower) || 
+                       text.includes(targetClean);
             }
-            return cardRole === cleanTarget || cardAction === cleanTarget || text.includes(cleanTarget);
+            return cardRole === targetClean || cardAction === targetClean || text.includes(targetLower);
         };
 
         if (activeKpi && activeKpi !== 'all') {
@@ -463,11 +476,18 @@ window.filterByKpi = function(filterVal, event) {
         }
     } else {
         let matched = false;
+        const cleanValStr = valStr.replaceAll(' ', '-');
+        const spaceValStr = valStr.replaceAll('-', ' ');
         selects.forEach(s => {
             [...s.options].forEach((opt, idx) => {
                 const optText = opt.text.toLowerCase().trim();
                 const optVal = opt.value.toLowerCase().trim();
-                if (optText === valStr || optVal === valStr || optText.includes(valStr) || valStr.includes(optText)) {
+                const optClean = optText.replaceAll(' ', '-');
+                if (optText === valStr || optVal === valStr || 
+                    optText === cleanValStr || optVal === cleanValStr ||
+                    optText === spaceValStr || optVal === spaceValStr ||
+                    optClean === cleanValStr ||
+                    optText.includes(valStr) || valStr.includes(optText)) {
                     s.selectedIndex = idx;
                     matched = true;
                 }
@@ -479,7 +499,7 @@ window.filterByKpi = function(filterVal, event) {
                 const onclickAttr = (card.getAttribute('onclick') || '').toLowerCase();
                 const hrefAttr = (card.getAttribute('href') || '').toLowerCase();
                 const textContent = card.textContent.toLowerCase();
-                if (onclickAttr.includes(valStr) || hrefAttr.includes(valStr) || textContent.includes(valStr)) {
+                if (onclickAttr.includes(valStr) || onclickAttr.includes(cleanValStr) || hrefAttr.includes(valStr) || hrefAttr.includes(cleanValStr) || textContent.includes(valStr)) {
                     targetCard = card;
                 }
             });
@@ -503,7 +523,9 @@ window.filterByKpi = function(filterVal, event) {
                 const cardStatus = (card.dataset.status || '').toLowerCase();
                 const cardText = card.textContent.toLowerCase();
                 const cleanVal = valStr.replaceAll(' ', '-');
-                const isMatch = cardStatus === valStr || cardStatus === cleanVal || cardStatus.includes(cleanVal) || cardStatus.includes(valStr) || cardText.includes(valStr);
+                const spaceVal = valStr.replaceAll('-', ' ');
+                const cardClean = cardStatus.replaceAll(' ', '-');
+                const isMatch = cardStatus === valStr || cardStatus === cleanVal || cardStatus === spaceVal || cardClean === cleanVal || cardStatus.includes(cleanVal) || cardStatus.includes(valStr) || cardText.includes(valStr);
                 if (isMatch) {
                     card.style.setProperty('display', '', '');
                     card.removeAttribute('hidden');
@@ -981,5 +1003,55 @@ document.addEventListener('submit', async function(e) {
     setInterval(pollUpdates, 3000);
     setTimeout(pollUpdates, 1000);
 })();
+
+// Validate Manager selection before submitting Create Project form
+document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form && (form.id === 'create-project-form' || (form.getAttribute('action') === '/projects' && form.getAttribute('method')?.toLowerCase() === 'post'))) {
+        const isEdit = form.querySelector('input[name="id"]');
+        if (isEdit) return;
+
+        const managerInputs = form.querySelectorAll('input[name="manager_id"]');
+        const hasManager = Array.from(managerInputs).some(inp => Boolean(inp.value && inp.value.trim()));
+
+        if (!hasManager) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.showAlertDialog) {
+                window.showAlertDialog({
+                    title: 'Select Manager',
+                    message: '⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai. Please Manager select karein.'
+                });
+            } else {
+                alert('⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai.');
+            }
+            return false;
+        }
+    }
+}, true);
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#btn-assign-project, form[action="/projects"] button.primary');
+    if (btn) {
+        const form = btn.closest('form');
+        if (form && !form.querySelector('input[name="id"]')) {
+            const managerInputs = form.querySelectorAll('input[name="manager_id"]');
+            const hasManager = Array.from(managerInputs).some(inp => Boolean(inp.value && inp.value.trim()));
+            if (!hasManager) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.showAlertDialog) {
+                    window.showAlertDialog({
+                        title: 'Select Manager',
+                        message: '⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai. Please Manager select karein.'
+                    });
+                } else {
+                    alert('⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai.');
+                }
+                return false;
+            }
+        }
+    }
+}, true);
 
 

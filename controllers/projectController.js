@@ -86,7 +86,8 @@ exports.list = async (req, res) => {
     const managers = u.role === 'admin' ? await db.prepare("SELECT id, name, designation FROM users WHERE role='manager' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId) : [];
     res.render('projects', {
         projects,
-        managers
+        managers,
+        error: req.query.error || ''
     });
 };
 
@@ -134,9 +135,7 @@ exports.save = async (req, res) => {
 
     const managerIds = [...new Set(rawManagerIds.map(x => Number(x)).filter(Boolean))];
     if (!name || !managerIds.length) {
-        return res.status(400).render('error', {
-            message: 'Project name and at least one manager are required'
-        });
+        return res.redirect('/projects?error=' + encodeURIComponent('Please select at least one manager before assigning the project.'));
     }
 
     const managerIdStr = managerIds.join(',');
