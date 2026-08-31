@@ -52,6 +52,7 @@ async function start() {
             }
         }
     }));
+    webApp.use('/landing', express.static(path.join(config.root, 'landing')));
     const sessionOptions = {
         ...config.mysql,
         schema: {
