@@ -1020,10 +1020,10 @@ document.addEventListener('submit', function(e) {
             if (window.showAlertDialog) {
                 window.showAlertDialog({
                     title: 'Select Manager',
-                    message: '⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai. Please Manager select karein.'
+                    message: '⚠️ Please select at least one Manager before assigning the project.'
                 });
             } else {
-                alert('⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai.');
+                alert('⚠️ Please select at least one Manager before assigning the project.');
             }
             return false;
         }
@@ -1043,10 +1043,10 @@ document.addEventListener('click', function(e) {
                 if (window.showAlertDialog) {
                     window.showAlertDialog({
                         title: 'Select Manager',
-                        message: '⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai. Please Manager select karein.'
+                        message: '⚠️ Please select at least one Manager before assigning the project.'
                     });
                 } else {
-                    alert('⚠️ Project assign karne ke liye kam se kam ek Manager select karna zaroori hai.');
+                    alert('⚠️ Please select at least one Manager before assigning the project.');
                 }
                 return false;
             }
