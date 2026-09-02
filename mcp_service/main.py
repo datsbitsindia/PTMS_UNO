@@ -311,11 +311,10 @@ def get_active_projects(user_id: int, user_role: str = "user") -> dict:
 def create_new_project(name: str, user_id: int, user_role: str = "user", description: Optional[str] = None, 
                        start_date: Optional[str] = None, end_date: Optional[str] = None, 
                        manager_name_or_email: Optional[str] = None) -> dict:
-    """Create a new project in the database. STRICT PERMISSION: Only 'admin' role can create and assign projects. Managers and Employees are DENIED."""
     u_role = (user_role or "user").lower().strip()
     if u_role != 'admin':
         return {
-            "error": "⚠️ Access Denied: Only Admins have permission to create and assign new projects."
+            "error": "⚠️ Access Denied: Only Admins have permission to create new projects."
         }
 
     conn = get_db_connection()

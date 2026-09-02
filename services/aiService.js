@@ -221,8 +221,9 @@ OPERATIONAL PROJECT & TASK RULES:
 1. PROJECT CREATION PERMISSION RULE (STRICT ADMIN ACCESS):
    - Current user role is: '${user.role}'.
    - ONLY 'admin' role has permission to create and assign new projects!
-   - If user asks to create/assign a project and user.role is NOT 'admin' (e.g. 'manager', 'user', 'employee'), DO NOT invoke create_new_project tool. Immediately inform the user:
-     "⚠️ Access Denied: Only Admins have permission to create and assign new projects. (Managers can view project progress & details)."
+   - If user asks to create/assign a project and user.role is NOT 'admin':
+     * If user.role is 'user' or 'employee', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects."
+     * If user.role is 'manager', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects. As a Manager, you can view project progress & health reports."
    - If user.role IS 'admin', invoke create_new_project(name, user_id, user_role, description, start_date, end_date, manager_name_or_email).
 2. PROJECT HEALTH & PROGRESS REPORTS (ADMIN & MANAGER ACCESS):
    - Both Admin and Manager can request project details, completion %, and health reports via get_project_health_report(project_name, user_id, user_role).
@@ -384,8 +385,9 @@ OPERATIONAL PROJECT & TASK RULES:
 1. PROJECT CREATION PERMISSION RULE (STRICT ADMIN ACCESS):
    - Current user role is: '${user.role}'.
    - ONLY 'admin' role has permission to create and assign new projects!
-   - If user asks to create/assign a project and user.role is NOT 'admin' (e.g. 'manager', 'user', 'employee'), DO NOT invoke create_new_project tool. Immediately inform the user:
-     "⚠️ Access Denied: Only Admins have permission to create and assign new projects. (Managers can view project progress & details)."
+   - If user asks to create/assign a project and user.role is NOT 'admin':
+     * If user.role is 'user' or 'employee', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects."
+     * If user.role is 'manager', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects. As a Manager, you can view project progress & health reports."
    - If user.role IS 'admin', invoke create_new_project(name, user_id, user_role, description, start_date, end_date, manager_name_or_email).
 2. PROJECT HEALTH & PROGRESS REPORTS (ADMIN & MANAGER ACCESS):
    - Both Admin and Manager can request project details, completion %, and health reports via get_project_health_report(project_name, user_id, user_role).
@@ -587,8 +589,9 @@ OPERATIONAL PROJECT & TASK RULES:
 1. PROJECT CREATION PERMISSION RULE (STRICT ADMIN ACCESS):
    - Current user role is: '${user.role}'.
    - ONLY 'admin' role has permission to create and assign new projects!
-   - If user asks to create/assign a project and user.role is NOT 'admin' (e.g. 'manager', 'user', 'employee'), DO NOT invoke create_new_project tool. Immediately inform the user:
-     "⚠️ Access Denied: Only Admins have permission to create and assign new projects. (Managers can view project progress & details)."
+   - If user asks to create/assign a project and user.role is NOT 'admin':
+     * If user.role is 'user' or 'employee', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects."
+     * If user.role is 'manager', immediately reply: "⚠️ Access Denied: Only Admins have permission to create new projects. As a Manager, you can view project progress & health reports."
    - If user.role IS 'admin', invoke create_new_project(name, user_id, user_role, description, start_date, end_date, manager_name_or_email).
 2. PROJECT HEALTH & PROGRESS REPORTS (ADMIN & MANAGER ACCESS):
    - Both Admin and Manager can request project details, completion %, and health reports via get_project_health_report(project_name, user_id, user_role).
