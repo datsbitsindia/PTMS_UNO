@@ -239,10 +239,9 @@ html body textarea {
     -webkit-backdrop-filter: blur(16px) !important;
     border: 1px solid rgba(255, 255, 255, 0.85) !important;
     border-radius: 8px !important;
-    color: #1e293b !important;
-    font-weight: 300 !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-    -webkit-font-smoothing: antialiased !important;
+    color: #0f172a !important;
+    font-weight: 400 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 html body input,
@@ -250,18 +249,18 @@ html body select,
 html body textarea,
 .login-card input,
 form input {
-    font-weight: 300 !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-    -webkit-font-smoothing: antialiased !important;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    color: #0f172a !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-    font-weight: 300 !important;
-    -webkit-text-fill-color: #1e293b !important;
-    -webkit-font-smoothing: antialiased !important;
+    font-weight: 400 !important;
+    -webkit-text-fill-color: #0f172a !important;
 }
 
 /* Primary Windows 11 Accent Button */
