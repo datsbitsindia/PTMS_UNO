@@ -36,12 +36,14 @@
         <% } %>
 
         <form method="post" action="/login">
-            <label>Email
-                <input type="email" name="email" required autocomplete="email" placeholder="you@gmail.com">
-            </label>
-            <label>Password
-                <input type="password" name="password" required autocomplete="current-password" placeholder="Your password">
-            </label>
+            <div style="margin-bottom: 14px; text-align: left;">
+                <label style="display: block; font-weight: 700; color: #0b1d3a; font-size: 13px; margin-bottom: 6px;">Email</label>
+                <input type="email" name="email" required autocomplete="email" placeholder="you@gmail.com" style="font-weight: 400 !important; font-size: 14px; color: #0f172a;">
+            </div>
+            <div style="margin-bottom: 18px; text-align: left;">
+                <label style="display: block; font-weight: 700; color: #0b1d3a; font-size: 13px; margin-bottom: 6px;">Password</label>
+                <input type="password" name="password" required autocomplete="current-password" placeholder="Your password" style="font-weight: 400 !important; font-size: 14px; color: #0f172a;">
+            </div>
             <button class="btn primary wide">Sign in</button>
         </form>
 
