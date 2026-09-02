@@ -308,6 +308,173 @@ def get_active_projects(user_id: int, user_role: str = "user") -> dict:
         conn.close()
 
 @mcp.tool()
+def create_new_project(name: str, user_id: int, user_role: str = "user", description: Optional[str] = None, 
+                       start_date: Optional[str] = None, end_date: Optional[str] = None, 
+                       manager_name_or_email: Optional[str] = None) -> dict:
+    """Create a new project in the database. STRICT PERMISSION: Only 'admin' or 'manager' roles can create projects. Regular users/employees are DENIED."""
+    u_role = (user_role or "user").lower().strip()
+    if u_role not in ['admin', 'manager']:
+        return {
+            "error": "⚠️ Access Denied: Only users with Admin or Manager roles have permission to create new projects."
+        }
+
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "Database connection failed."}
+
+    try:
+        p_tbl = get_table_name(conn, "projects")
+        u_tbl = get_table_name(conn, "users")
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute(f"SELECT id FROM `{p_tbl}` WHERE LOWER(name) = %s AND status NOT IN (2, 3, '2', '3', 'Completed', 'Cancelled') LIMIT 1", (name.lower().strip(),))
+        if cursor.fetchone():
+            return {"error": f"Project '{name}' already exists and is currently active."}
+
+        manager_id = str(user_id)
+        if manager_name_or_email and str(manager_name_or_email).strip():
+            cursor.execute(f"SELECT id FROM `{u_tbl}` WHERE email LIKE %s OR name LIKE %s LIMIT 1", 
+                           (f"%{manager_name_or_email}%", f"%{manager_name_or_email}%"))
+            mgr_row = cursor.fetchone()
+            if mgr_row:
+                manager_id = str(mgr_row["id"])
+
+        cursor.execute(f"SELECT organization_id FROM `{u_tbl}` WHERE id = %s LIMIT 1", (user_id,))
+        usr_row = cursor.fetchone()
+        org_id = usr_row["organization_id"] if (usr_row and usr_row.get("organization_id")) else 1
+
+        s_id = 4
+        cursor.execute(f"""
+            INSERT INTO `{p_tbl}` (name, description, start_date, end_date, created_by, manager_id, status, status_id, organization_id)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Planned', %s, %s)
+        """, (name.strip(), description or f"Project {name}", start_date or None, end_date or None, user_id, manager_id, s_id, org_id))
+        conn.commit()
+
+        project_id = cursor.lastrowid
+        return {
+            "message": f"✅ Project '{name}' (ID: #{project_id}) created successfully!",
+            "project": {
+                "id": project_id,
+                "name": name.strip(),
+                "description": description or f"Project {name}",
+                "start_date": start_date,
+                "end_date": end_date,
+                "status": "Planned",
+                "manager_id": manager_id
+            }
+        }
+    except Exception as e:
+        return {"error": f"Failed to create project: {str(e)}"}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def get_project_health_report(project_name: str, user_id: int, user_role: str = "user") -> dict:
+    """Get comprehensive progress, task metrics, completion %, and status of a specific project."""
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "Database connection failed."}
+
+    try:
+        p_tbl = get_table_name(conn, "projects")
+        t_tbl = get_table_name(conn, "tasks")
+        u_tbl = get_table_name(conn, "users")
+
+        project_id = resolve_project_id(conn, project_name)
+        if not project_id:
+            return {"error": f"Project '{project_name}' not found."}
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(f"SELECT * FROM `{p_tbl}` WHERE id = %s", (project_id,))
+        proj = cursor.fetchone()
+        if not proj:
+            return {"error": f"Project ID #{project_id} not found."}
+
+        cursor.execute(f"SELECT status, status_id, due_date FROM `{t_tbl}` WHERE project_id = %s", (project_id,))
+        tasks = cursor.fetchall() or []
+
+        total_tasks = len(tasks)
+        completed_tasks = sum(1 for t in tasks if str(t.get("status")).lower() in ['2', 'completed'])
+        in_progress_tasks = sum(1 for t in tasks if str(t.get("status")).lower() in ['1', 'in progress'])
+        pending_tasks = sum(1 for t in tasks if str(t.get("status")).lower() in ['0', '4', 'pending', 'planned'])
+        
+        from datetime import date
+        today_str = date.today().isoformat()
+        overdue_tasks = sum(1 for t in tasks if t.get("due_date") and str(t["due_date"]) < today_str and str(t.get("status")).lower() not in ['2', '3', 'completed', 'cancelled'])
+
+        completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0.0
+
+        mgr_ids = [m.strip() for m in str(proj.get("manager_id") or "").split(",") if m.strip()]
+        mgr_names = []
+        if mgr_ids:
+            cursor.execute(f"SELECT name FROM `{u_tbl}` WHERE id IN ({','.join(['%s']*len(mgr_ids))})", tuple(mgr_ids))
+            mgr_rows = cursor.fetchall() or []
+            mgr_names = [m["name"] for m in mgr_rows]
+
+        return {
+            "project_name": proj["name"],
+            "status": STATUS_NUM_TO_STR.get(proj.get("status_id"), "In Progress"),
+            "start_date": str(proj.get("start_date")) if proj.get("start_date") else None,
+            "end_date": str(proj.get("end_date")) if proj.get("end_date") else None,
+            "managers": mgr_names,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "in_progress_tasks": in_progress_tasks,
+            "pending_tasks": pending_tasks,
+            "overdue_tasks": overdue_tasks,
+            "completion_rate_percentage": completion_rate
+        }
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
+def get_delayed_projects(user_id: int, user_role: str = "user") -> dict:
+    """Fetch active projects that have overdue tasks or passed deadlines."""
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "Database connection failed."}
+
+    try:
+        active_projects = fetch_active_projects_internal(conn)
+        if not active_projects:
+            return {"delayed_projects": []}
+
+        t_tbl = get_table_name(conn, "tasks")
+        cursor = conn.cursor(dictionary=True)
+        from datetime import date
+        today_str = date.today().isoformat()
+
+        delayed = []
+        for p in active_projects:
+            p_id = p["id"]
+            cursor.execute(f"""
+                SELECT COUNT(*) as cnt FROM `{t_tbl}` 
+                WHERE project_id = %s AND due_date IS NOT NULL AND due_date < %s 
+                  AND status NOT IN (2, 3, '2', '3', 'Completed', 'Cancelled')
+            """, (p_id, today_str))
+            res = cursor.fetchone()
+            overdue_cnt = res["cnt"] if res else 0
+
+            is_past_end_date = p.get("end_date") and str(p["end_date"]) < today_str
+
+            if overdue_cnt > 0 or is_past_end_date:
+                delayed.append({
+                    "id": p["id"],
+                    "name": p["name"],
+                    "end_date": p.get("end_date"),
+                    "overdue_tasks_count": overdue_cnt,
+                    "is_past_deadline": bool(is_past_end_date)
+                })
+
+        return {"delayed_projects": delayed}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+@mcp.tool()
 def create_new_task(title: str, user_id: int, description: Optional[str] = None, priority: Optional[str] = "Medium", 
                     assigned_to_email: Optional[str] = None, project_name: Optional[str] = None, due_date: Optional[str] = None) -> dict:
     """Create a new task in the database for a user and project."""

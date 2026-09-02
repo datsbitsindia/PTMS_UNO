@@ -80,6 +80,21 @@ function formatToolResultToText(toolName, result, currentUser) {
         const p = result.productivity;
         return `Productivity Summary:\n- Total Assigned: ${p.total_assigned_tasks}\n- Completed: ${p.completed_tasks}\n- Overdue: ${p.overdue_tasks}\n- Completion Rate: ${p.completion_rate_percentage}%\n- Score: ${p.performance_score}`;
     }
+    if (result.project && typeof result.project === 'object') {
+        const p = result.project;
+        return `✅ **Project '${p.name}' (ID: #${p.id}) created successfully!**\n- **Status:** ${p.status}\n- **Description:** ${p.description}\n- **Start Date:** ${p.start_date || 'Immediate'}\n- **End Date:** ${p.end_date || 'Flexible'}`;
+    }
+    if (result.completion_rate_percentage !== undefined && result.project_name) {
+        return `📊 **Project Health Report: ${result.project_name}**\n- **Status:** ${result.status}\n- **Managers:** ${result.managers && result.managers.length > 0 ? result.managers.join(', ') : 'None'}\n- **Completion Rate:** ${result.completion_rate_percentage}%\n- **Total Tasks:** ${result.total_tasks}\n- **Completed:** ${result.completed_tasks} | **In Progress:** ${result.in_progress_tasks} | **Pending:** ${result.pending_tasks}\n- **Overdue Tasks:** ⚠️ ${result.overdue_tasks}`;
+    }
+    if (result.delayed_projects && Array.isArray(result.delayed_projects)) {
+        if (result.delayed_projects.length === 0) return "🎉 Excellent news! No active projects are currently delayed or lagging behind schedule.";
+        let reply = `⚠️ **Delayed & At-Risk Projects (${result.delayed_projects.length}):**\n\n`;
+        result.delayed_projects.forEach((dp, i) => {
+            reply += `${i + 1}. **${dp.name}** (ID: #${dp.id})\n   - Overdue Tasks: ${dp.overdue_tasks_count}\n   - Target End Date: ${dp.end_date || 'N/A'} ${dp.is_past_deadline ? '🔴 (Past Deadline!)' : ''}\n`;
+        });
+        return reply.trim();
+    }
     return typeof result === 'string' ? result : JSON.stringify(result);
 }
 
@@ -537,37 +552,42 @@ async function processUserMessage(user, message, existingHistory = []) {
             try {
                 const client = new GoogleGenAI({ apiKey: currentKey });
 
-                const systemInstruction = `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+                const systemInstruction = `You are PTMS AI Assistant - Dedicated Project & Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
 
-CORE DOMAIN SCOPE & STRICT TASK-ONLY BOUNDARY:
-- You are 100% EXCLUSIVELY a Task Management Assistant for PTMS (Project & Task Management System).
-- Your ONLY function is handling Tasks (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, and task reports).
+CORE DOMAIN SCOPE & STRICT TASK/PROJECT BOUNDARY:
+- You are 100% EXCLUSIVELY a Project & Task Management Assistant for PTMS (Project & Task Management System).
+- Your ONLY functions are handling Tasks and Projects (creating/searching tasks, updating status, reassigning tasks, adding comments, task & productivity reports, creating projects, and project health reports).
 - STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
-- If the user asks ANY question outside of Task Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
-  "I'm sorry, but I can only help with task-related requests such as creating, updating, or viewing tasks. Let me know if you need assistance with any of your tasks!"
+- If the user asks ANY question outside of Task & Project Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
+  "I'm sorry, but I can only help with task and project-related requests such as creating, updating, or viewing tasks and projects. Let me know if you need assistance with any of your work!"
 
 CRITICAL LANGUAGE & SCRIPT RULE:
 - ALWAYS write all responses using English / Latin letters ONLY (e.g. "Abhi aapke To Do tab mein koi pending task nahi hai").
 - NEVER use Devanagari script or Hindi characters (like "अभी आपके लिए...").
 
-OPERATIONAL TASK RULES:
-1. AUTOMATIC TASK LOOKUP (NEVER ASK USER FOR TASK ID):
+OPERATIONAL PROJECT & TASK RULES:
+1. PROJECT CREATION PERMISSION RULE (STRICT ROLE ACCESS):
+   - Current user role is: '${user.role}'.
+   - ONLY 'admin' or 'manager' roles can create new projects!
+   - If user asks to create a project and user.role is 'user' or 'employee', DO NOT invoke create_new_project tool. Immediately inform the user:
+     "⚠️ Access Denied: Only Admins and Managers have permission to create new projects."
+   - If user.role IS 'admin' or 'manager', invoke create_new_project(name, user_id, user_role, description, start_date, end_date, manager_name_or_email).
+2. PROJECT HEALTH & PROGRESS REPORTS:
+   - When asked about project progress, completion %, or status, invoke get_project_health_report(project_name, user_id, user_role).
+   - When asked which projects are lagging behind or overdue, invoke get_delayed_projects(user_id, user_role).
+3. AUTOMATIC TASK LOOKUP (NEVER ASK USER FOR TASK ID):
    - NEVER ask the user for a Task ID! End-users do not know database IDs.
-   - When a user asks to update, complete, delete, reassign, or add a comment to a task by title (e.g. "Backup Lelo forward this task to chintan", "Backup Lelo delete this task", "add comment is was done? Backup Lelo in this task"), ALWAYS call get_user_tasks first to search the database, automatically find the Task ID, and then perform the update/delete/reassign/comment action!
-2. TASK CREATION CLARIFICATION:
+   - When a user asks to update, complete, delete, reassign, or add a comment to a task by title, ALWAYS call get_user_tasks first to search the database, find the Task ID, and then perform the action!
+4. TASK CREATION CLARIFICATION:
    - When a user asks to create a task, check if essential details (title, assignee, due date, priority) are provided.
    - If essential fields are missing, ask polite clarifying questions before invoking create_new_task, or suggest reasonable defaults and confirm with user.
-   - If user mentions an employee name (e.g. "Assign to Bhavin" or "forward to Chintan"), call get_team_members first to verify the exact person.
-3. STRICT ACTIVE PROJECT & ERROR REPORTING RULE:
+   - If user mentions an employee name (e.g. "Assign to Bhavin"), call get_team_members first to verify the exact person.
+5. STRICT ACTIVE PROJECT & ERROR REPORTING RULE:
    - Tasks can ONLY be assigned to EXISTING ACTIVE / PENDING projects!
-   - NEVER invent, guess, or hallucinate project names (such as "DBMS", "adversity", "test")!
+   - NEVER invent, guess, or hallucinate project names!
    - ONLY pass project_name to create_new_task IF the user explicitly specified a project name in their prompt.
-   - If the user specifies a non-existing or completed project, or if create_new_task returns a project error, respond directly and politely:
+   - If the user specifies a non-existing or completed project, respond directly and politely:
      "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [list active projects]. Kripya inme se kisi active project ka naam batayein!"
-   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
-   - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.
-4. TASK STATUS PERMISSION RULE:
-   - ONLY assigned team members (or Admin) can change a task's status or mark it Completed.
    - If a Manager/Creator asks to mark a task as Completed that is assigned to someone else (e.g. Jemini), pass user_id and user_role to update_task_status tool. If tool returns Permission Denied, explain politely that only the assigned employee (or Admin) can mark their assigned tasks as Completed.
 5. DATE RANGE FILTERING RULE:
    - Current Date context: 2026-08-20.
