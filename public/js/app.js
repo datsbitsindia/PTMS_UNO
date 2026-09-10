@@ -209,7 +209,7 @@ window.applyCompactFilter = function(bar) {
                 return isForwarded;
             }
             if (targetLower === 'pending') {
-                return cardStatusLower === 'pending' || cardStatusLower === 'planned' || cardStatusClean === 'in-progress' || cardStatusLower === 'in progress';
+                return cardStatusLower === 'pending' || cardStatusLower === 'planned';
             }
             if (cardStatusLower) {
                 return cardStatusLower === targetLower || 
