@@ -301,8 +301,10 @@ exports.save = async (req, res) => {
         const existingTask = await db.prepare('SELECT t.*, p.manager_id FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE t.id=?').get(id);
         if (!existingTask) return res.status(404).render('error', { message: 'Task not found' });
 
-        const canEdit = req.session.user.id === existingTask.created_by ||
-                       String(existingTask.assigned_to || '').split(',').includes(String(req.session.user.id));
+        const isAssigneeInList = String(existingTask.assigned_to || '').split(',').map(x => x.trim()).includes(String(req.session.user.id));
+        const isAssigneeInTable = await db.prepare('SELECT 1 FROM task_assignees WHERE task_id=? AND user_id=?').get(id, req.session.user.id);
+        const canEdit = Number(req.session.user.id) === Number(existingTask.created_by) ||
+                       isAssigneeInList || !!isAssigneeInTable;
 
         if (!canEdit) {
             return res.status(403).render('error', { message: 'Only the task creator, manager, or assigned user can edit this task.' });
