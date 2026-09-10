@@ -328,7 +328,7 @@ exports.save = async (req, res) => {
         );
 
         for (const targetAssignee of assignees) {
-            await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status) VALUES(?,?,?)').run(id, targetAssignee, 'Pending');
+            await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id, status, status_id) VALUES(?,?,0,0)').run(id, targetAssignee);
             await activity.log(req.session.user.id, 'Task Updated', title);
             await notifications.notify(targetAssignee, `Task Updated: ${req.session.user.name} updated task details for '${title}'`, `/tasks/${id}`);
         }
