@@ -325,8 +325,8 @@ exports.save = async (req, res) => {
             }
         } catch(e) { updPriorityName = priority; }
 
-        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,priority_id=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=? WHERE id=?').run(
-            pid, title, description, updPriorityName, updPriorityId, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, id
+        await db.prepare('UPDATE tasks SET project_id=?,title=?,description=?,priority=?,priority_id=?,due_date=?,assigned_to=?,estimated_hours=?,is_self_task=?,updated_by=? WHERE id=?').run(
+            pid, title, description, updPriorityName, updPriorityId, due_date || null, assignedToStr, Number(estimated_hours) || 0, isSelfTask, Number(req.session.user.id), id
         );
 
         for (const targetAssignee of assignees) {
