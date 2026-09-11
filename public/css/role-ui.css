@@ -72,7 +72,7 @@ html body .entity-card.task-card .entity-meta small {
     display: block !important;
     font-size: 10px !important;
     line-height: 1.2 !important;
-    color: var(--muted) !important;
+    color: #334155 !important;
     text-transform: uppercase !important;
     letter-spacing: .02em !important;
     white-space: nowrap !important;
