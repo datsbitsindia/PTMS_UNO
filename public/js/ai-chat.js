@@ -538,8 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = chatInput.value.trim();
         if (!text) return;
 
-        if (isLiveListening && liveRecognition) liveRecognition.stop();
-        if (isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        if (isLiveListening && liveRecognition) { liveRecognition.stop(); isLiveListening = false; }
+        if (isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') { mediaRecorder.stop(); isRecording = false; }
+        if (micBtn) micBtn.classList.remove('listening');
+        chatInput.placeholder = 'Type or speak a message...';
 
         // User Message UI
         appendMessage(text, 'user');
