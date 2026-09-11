@@ -488,6 +488,12 @@ html body div.employee-kpis .metric-card span {
 .task-action-pill.priority-pill.high { background: #fef3c7 !important; color: #b45309 !important; border-color: #fde68a !important; }
 .task-action-pill.priority-pill.critical { background: #fee2e2 !important; color: #b91c1c !important; border-color: #fecaca !important; }
 
+/* Priority Pill Colors — Task List Cards */
+.priority-pill.low { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
+.priority-pill.medium { background: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important; }
+.priority-pill.high { background: #fef3c7 !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
+.priority-pill.critical { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
+
 /* Unbreakable Pure White Background for All Inputs, Textareas & Selects in Default State */
 html body input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not(.note-title-field),
 html body select,
