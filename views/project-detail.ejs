@@ -134,10 +134,19 @@
 
 <% if(user.role==='admin' || user.role==='manager'){ %>
     <section class="panel" style="margin-top:10px">
-        <div class="panel-head">
+        <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h2>Project tasks</h2>
+            <% if (!project.ai_tasks_generated && (user.role === 'admin' || user.role === 'manager')) { %>
+                <button type="button" class="btn" id="btn-generate-ai-tasks" data-project-id="<%= project.id %>" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); color:#fff; font-weight:600; font-size:12px; padding:7px 14px; border:none; border-radius:8px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; box-shadow: 0 2px 8px rgba(124,58,237,0.25);">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Tasks with AI
+                </button>
+            <% } else if (project.ai_tasks_generated) { %>
+                <span class="badge" style="background:#e2e8f0; color:#475569; padding:5px 12px; border-radius:20px; font-weight:600; font-size:11.5px; display:inline-flex; align-items:center; gap:5px;">
+                    <i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> AI Tasks Generated
+                </span>
+            <% } %>
         </div>
-        <div class="table-wrap" style="max-height: 180px; overflow-y: auto; overflow-x: auto;">
+        <div class="table-wrap" style="max-height: 250px; overflow-y: auto; overflow-x: auto;">
             <table>
                 <thead style="position: sticky; top: 0; background: #edf2fa; z-index: 2;">
                     <tr>
@@ -203,4 +212,269 @@
 </div>
 <% } %>
 
+<!-- AI Tasks Checklist & Preview Modal -->
+<div class="modal" id="ai-tasks-modal">
+    <div class="modal-card" style="max-width:850px; width:95%; max-height:90vh; display:flex; flex-direction:column; padding:20px; border-radius:16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:14px;">
+            <h2 style="margin:0; font-size:17px; display:flex; align-items:center; gap:8px; color:#0f172a;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i>
+                AI Project Task Generator
+            </h2>
+            <button class="modal-close" data-close>&times;</button>
+        </div>
+
+        <div id="ai-tasks-body" style="flex:1; overflow-y:auto; padding-right:6px; min-height:220px;">
+            <!-- Rendered dynamically -->
+        </div>
+
+        <div style="border-top:1px solid #e2e8f0; padding-top:14px; margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span id="ai-selected-count-badge" style="font-weight:700; font-size:13px; color:#475569;">Selected Tasks: 0</span>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn" data-close style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Cancel</button>
+                <button type="button" class="btn primary" id="btn-save-ai-tasks" style="background:linear-gradient(135deg, #16a34a, #15803d); border:none; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-check"></i> Create Selected Tasks
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnGen = document.getElementById('btn-generate-ai-tasks');
+    const modal = document.getElementById('ai-tasks-modal');
+    const body = document.getElementById('ai-tasks-body');
+    const btnSave = document.getElementById('btn-save-ai-tasks');
+    const badge = document.getElementById('ai-selected-count-badge');
+    let orgUsers = [];
+
+    if (!btnGen) return;
+
+    modal.querySelectorAll('[data-close]').forEach(c => {
+        c.addEventListener('click', () => modal.classList.remove('open'));
+    });
+
+    btnGen.addEventListener('click', async function() {
+        const projectId = this.dataset.projectId;
+        modal.classList.add('open');
+        btnSave.style.display = 'inline-flex';
+        btnSave.disabled = true;
+
+        body.innerHTML = `
+            <div style="text-align:center; padding:40px 20px;">
+                <i class="fa-solid fa-wand-magic-sparkles fa-spin" style="font-size:36px; color:#7c3aed; margin-bottom:16px;"></i>
+                <h3 style="margin:0 0 8px 0; color:#1e293b; font-size:16px;">AI is analyzing project details...</h3>
+                <p style="color:#64748b; font-size:13px; margin:0;">Structuring logical phases, priorities, and matching team assignees.</p>
+            </div>
+        `;
+
+        try {
+            const res = await fetch('/projects/' + projectId + '/generate-ai-tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                body.innerHTML = `<div style="padding:20px; background:#fef2f2; color:#991b1b; border-radius:10px; font-weight:600;">⚠️ ${data.error || 'Failed to generate tasks.'}</div>`;
+                btnSave.style.display = 'none';
+                return;
+            }
+
+            orgUsers = data.users || [];
+            renderTasks(data.tasks || []);
+            btnSave.disabled = false;
+            updateCount();
+        } catch (err) {
+            console.error('AI gen error:', err);
+            body.innerHTML = `<div style="padding:20px; background:#fef2f2; color:#991b1b; border-radius:10px; font-weight:600;">⚠️ Network error. Please try again.</div>`;
+            btnSave.style.display = 'none';
+        }
+    });
+
+    function renderTasks(tasks) {
+        if (!tasks.length) {
+            body.innerHTML = `<p style="color:#64748b; text-align:center; padding:20px;">No task suggestions could be generated for this project description.</p>`;
+            return;
+        }
+
+        let html = '<div id="ai-tasks-list">';
+        tasks.forEach(t => {
+            html += createTaskRowHtml(t);
+        });
+        html += '</div>';
+
+        html += `
+            <button type="button" id="btn-add-custom-task" style="margin-top:10px; font-size:12px; padding:6px 12px; background:#e0e7ff; color:#3730a3; border:none; border-radius:8px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-plus"></i> Add Custom Task
+            </button>
+        `;
+
+        body.innerHTML = html;
+        attachRowEvents();
+    }
+
+    function createTaskRowHtml(t = {}) {
+        const title = escapeHtml(t.title || '');
+        const desc = escapeHtml(t.description || '');
+        const priority = t.priority || 'High';
+        const days = t.estimated_days || 2;
+        const suggestedId = t.suggested_assignee_id || '';
+
+        let calculatedDueDate = t.due_date || '';
+        if (!calculatedDueDate) {
+            const d = new Date();
+            d.setDate(d.getDate() + (Number(days) || 2));
+            calculatedDueDate = d.toISOString().split('T')[0];
+        }
+
+        let userOpts = `<option value="">Select Assignee</option>`;
+        orgUsers.forEach(u => {
+            const sel = String(u.id) === String(suggestedId) ? 'selected' : '';
+            userOpts += `<option value="${u.id}" ${sel}>${escapeHtml(u.name)} (${u.role})</option>`;
+        });
+
+        return `
+            <div class="ai-task-row" style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; margin-bottom:8px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" class="ai-task-check" checked style="width:18px; height:18px; cursor:pointer;">
+                    <input type="text" class="ai-task-title-input" value="${title}" placeholder="Task title" style="flex:1; font-weight:600; font-size:13px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px;">
+                    <button type="button" class="btn-delete-ai-task" style="background:none; border:none; color:#ef4444; font-size:14px; cursor:pointer; padding:4px;" title="Remove Task">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px;">
+                    <label style="display:flex; align-items:center; gap:4px; margin:0;">
+                        <span style="color:#64748b;">Priority:</span>
+                        <select class="ai-task-priority-select" style="padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; font-weight:600;">
+                            <option value="Low" ${priority==='Low'?'selected':''}>Low</option>
+                            <option value="Medium" ${priority==='Medium'?'selected':''}>Medium</option>
+                            <option value="High" ${priority==='High'?'selected':''}>High</option>
+                            <option value="Critical" ${priority==='Critical'?'selected':''}>Critical</option>
+                        </select>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; margin:0;">
+                        <span style="color:#64748b;">Assignee:</span>
+                        <select class="ai-task-assignee-select" style="padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                            ${userOpts}
+                        </select>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; margin:0;">
+                        <span style="color:#64748b;">Due Date:</span>
+                        <input type="date" class="ai-task-duedate-input" value="${calculatedDueDate}" style="padding:4px 6px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                    </label>
+                    <label style="display:flex; align-items:center; gap:4px; margin:0;">
+                        <span style="color:#64748b;">Est. Days:</span>
+                        <input type="number" class="ai-task-days-input" value="${days}" min="1" max="90" style="width:55px; padding:4px 6px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px;">
+                    </label>
+                </div>
+                <textarea class="ai-task-desc-input" rows="2" placeholder="Optional task description..." style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:12px; color:#334155;">${desc}</textarea>
+            </div>
+        `;
+    }
+
+    function attachRowEvents() {
+        body.querySelectorAll('.ai-task-check').forEach(chk => {
+            chk.addEventListener('change', updateCount);
+        });
+
+        body.querySelectorAll('.btn-delete-ai-task').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('.ai-task-row');
+                if (row) {
+                    row.remove();
+                    updateCount();
+                }
+            });
+        });
+
+        body.querySelectorAll('.ai-task-days-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const row = this.closest('.ai-task-row');
+                const days = Number(this.value) || 1;
+                const d = new Date();
+                d.setDate(d.getDate() + days);
+                const dateInput = row.querySelector('.ai-task-duedate-input');
+                if (dateInput) dateInput.value = d.toISOString().split('T')[0];
+            });
+        });
+
+        const btnAdd = body.querySelector('#btn-add-custom-task');
+        if (btnAdd) {
+            btnAdd.addEventListener('click', function() {
+                const list = body.querySelector('#ai-tasks-list');
+                if (list) {
+                    list.insertAdjacentHTML('beforeend', createTaskRowHtml({ title: '', priority: 'High', estimated_days: 2 }));
+                    attachRowEvents();
+                    updateCount();
+                }
+            });
+        }
+    }
+
+    function updateCount() {
+        const checked = body.querySelectorAll('.ai-task-check:checked').length;
+        badge.textContent = `Selected Tasks: ${checked}`;
+    }
+
+    btnSave.addEventListener('click', async function() {
+        const projectId = btnGen.dataset.projectId;
+        const rows = body.querySelectorAll('.ai-task-row');
+        const tasksToSave = [];
+
+        rows.forEach(row => {
+            const chk = row.querySelector('.ai-task-check');
+            if (chk && chk.checked) {
+                const title = row.querySelector('.ai-task-title-input').value.trim();
+                if (title) {
+                    tasksToSave.push({
+                        title: title,
+                        description: row.querySelector('.ai-task-desc-input').value.trim(),
+                        priority: row.querySelector('.ai-task-priority-select').value,
+                        assigned_to: row.querySelector('.ai-task-assignee-select').value,
+                        estimated_days: Number(row.querySelector('.ai-task-days-input').value) || 1,
+                        due_date: row.querySelector('.ai-task-duedate-input')?.value || ''
+                    });
+                }
+            }
+        });
+
+        if (tasksToSave.length === 0) {
+            alert('Please select at least 1 valid task to save.');
+            return;
+        }
+
+        btnSave.disabled = true;
+        btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Tasks...`;
+
+        try {
+            const res = await fetch('/projects/' + projectId + '/save-ai-tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tasks: tasksToSave })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error saving tasks: ' + (data.error || 'Unknown error'));
+                btnSave.disabled = false;
+                btnSave.innerHTML = `<i class="fa-solid fa-check"></i> Create Selected Tasks`;
+            }
+        } catch (err) {
+            console.error('Save AI tasks error:', err);
+            alert('Network error while saving tasks.');
+            btnSave.disabled = false;
+            btnSave.innerHTML = `<i class="fa-solid fa-check"></i> Create Selected Tasks`;
+        }
+    });
+
+    function escapeHtml(str) {
+        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+});
+</script>
+
 <%- include('partials/foot') %>
+

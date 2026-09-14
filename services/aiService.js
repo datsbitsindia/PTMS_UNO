@@ -719,4 +719,121 @@ async function transcribeAudioWithGroq(audioBuffer, filename = 'speech.webm') {
     }
 }
 
-module.exports = { processUserMessage, transcribeAudioWithGroq };
+async function generateProjectTasksFromAI({ name, description, start_date, end_date, users = [] }) {
+    const groqKey = process.env.GROQ_API_KEY || config.groqApiKey || '';
+    const currentKey = process.env.GEMINI_API_KEY || config.geminiApiKey || '';
+    const openrouterKey = process.env.OPENROUTER_API_KEY || config.openrouterApiKey || '';
+
+    const userListStr = (users || []).map(u => `- ${u.name} (ID: ${u.id}, Role: ${u.role}, Department: ${u.department || 'N/A'})`).join('\n');
+
+    const prompt = `You are an expert Project Management AI. Given the project details below, generate a list of 4 to 8 clear, actionable tasks to complete this project.
+
+PROJECT DETAILS:
+- Name: ${name}
+- Description: ${(description || 'N/A').replace(/<[^>]*>?/gm, '')}
+- Start Date: ${start_date || 'N/A'}
+- Target End Date: ${end_date || 'N/A'}
+
+AVAILABLE TEAM MEMBERS / ASSIGNEES:
+${userListStr || 'No specific team members listed.'}
+
+CRITICAL RULES:
+1. Respond ONLY with a valid JSON object. No markdown formatting outside JSON, no backticks, no extra text.
+2. Structure the JSON list of tasks exactly like this:
+{
+  "tasks": [
+    {
+      "title": "Task title",
+      "description": "Short task description",
+      "priority": "High",
+      "estimated_days": 3,
+      "suggested_assignee_id": 1
+    }
+  ]
+}
+3. Generate between 4 to 8 clear, actionable tasks.
+4. Keep priority strictly as one of: "Low", "Medium", "High", "Critical".
+5. Keep estimated_days as a positive integer.
+6. Provide clear, realistic, actionable task titles.
+7. Set suggested_assignee_id to the best matching user ID from team list, or null if no clear match.`;
+
+    let rawJsonText = null;
+
+    if (openrouterKey && !rawJsonText) {
+        try {
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${openrouterKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "google/gemini-2.5-flash",
+                    response_format: { type: "json_object" },
+                    messages: [{ role: "user", content: prompt }]
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                rawJsonText = data.choices?.[0]?.message?.content;
+            }
+        } catch (e) {
+            console.error('generateProjectTasksFromAI OpenRouter Error:', e.message);
+        }
+    }
+
+    if (currentKey && !rawJsonText) {
+        const geminiModels = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+        for (const gModel of geminiModels) {
+            try {
+                const client = new GoogleGenAI({ apiKey: currentKey });
+                const result = await client.models.generateContent({
+                    model: gModel,
+                    contents: prompt,
+                    config: { responseMimeType: "application/json" }
+                });
+                rawJsonText = result.text || result.response?.text?.();
+                if (rawJsonText) break;
+            } catch (e) {
+                console.error(`generateProjectTasksFromAI Gemini (${gModel}) Error:`, e.message);
+            }
+        }
+    }
+
+    if (groqKey && !rawJsonText) {
+        const groqModels = ['groq/compound', 'openai/gpt-oss-20b'];
+        for (const gModel of groqModels) {
+            try {
+                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${groqKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: gModel,
+                        messages: [{ role: "user", content: prompt }]
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    rawJsonText = data.choices?.[0]?.message?.content;
+                    if (rawJsonText) break;
+                }
+            } catch (e) {
+                console.error(`generateProjectTasksFromAI Groq (${gModel}) Error:`, e.message);
+            }
+        }
+    }
+
+    if (!rawJsonText) {
+        throw new Error("Unable to connect to AI service. Please verify GEMINI_API_KEY or GROQ_API_KEY.");
+    }
+
+    let cleaned = rawJsonText.trim();
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
+
+    return JSON.parse(cleaned);
+}
+
+module.exports = { processUserMessage, transcribeAudioWithGroq, generateProjectTasksFromAI };

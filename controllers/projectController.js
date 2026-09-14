@@ -253,3 +253,130 @@ exports.addUpdate = async (req, res) => {
     res.status(500).render('error', { message: 'Failed to send update: ' + err.message });
   }
 };
+
+exports.generateAiTasks = async (req, res) => {
+    try {
+        const u = req.session.user;
+        const orgId = u.organization_id || 1;
+        const projectId = req.params.id;
+
+        const project = await db.prepare('SELECT * FROM projects WHERE id=? AND organization_id=?').get(projectId, orgId);
+        if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+
+        const managerIds = String(project.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
+        if (u.role !== 'admin' && !managerIds.includes(u.id)) {
+            return res.status(403).json({ success: false, error: 'Access denied. Only Admins and assigned Managers can generate tasks.' });
+        }
+
+        if (project.ai_tasks_generated) {
+            return res.status(400).json({ success: false, error: 'AI tasks have already been generated for this project.' });
+        }
+
+        const users = await db.prepare("SELECT id, name, role, department FROM users WHERE active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);
+
+        const aiService = require('../services/aiService');
+        const result = await aiService.generateProjectTasksFromAI({
+            name: project.name,
+            description: project.description,
+            start_date: project.start_date,
+            end_date: project.end_date,
+            users
+        });
+
+        let flatTasks = [];
+        if (Array.isArray(result.tasks)) {
+            flatTasks = result.tasks;
+        } else if (Array.isArray(result.phases)) {
+            result.phases.forEach(p => {
+                if (Array.isArray(p.tasks)) flatTasks.push(...p.tasks);
+            });
+        }
+
+        res.json({
+            success: true,
+            tasks: flatTasks,
+            users
+        });
+    } catch (err) {
+        console.error('generateAiTasks error:', err);
+        res.status(500).json({ success: false, error: err.message || 'Failed to generate tasks using AI' });
+    }
+};
+
+exports.saveAiTasks = async (req, res) => {
+    try {
+        const u = req.session.user;
+        const orgId = u.organization_id || 1;
+        const projectId = req.params.id;
+
+        const project = await db.prepare('SELECT * FROM projects WHERE id=? AND organization_id=?').get(projectId, orgId);
+        if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+
+        const managerIds = String(project.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
+        if (u.role !== 'admin' && !managerIds.includes(u.id)) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        if (project.ai_tasks_generated) {
+            return res.status(400).json({ success: false, error: 'AI tasks have already been generated for this project.' });
+        }
+
+        const tasksToCreate = req.body.tasks;
+        if (!Array.isArray(tasksToCreate) || tasksToCreate.length === 0) {
+            return res.status(400).json({ success: false, error: 'No tasks selected to save.' });
+        }
+
+        const allowedPriorities = ['Low', 'Medium', 'High', 'Critical'];
+        let createdCount = 0;
+
+        for (const t of tasksToCreate) {
+            const title = String(t.title || '').trim();
+            if (!title) continue;
+
+            const description = String(t.description || '').trim();
+            const priority = allowedPriorities.includes(t.priority) ? t.priority : 'High';
+            const assignedTo = Number(t.assigned_to) || u.id;
+            const estimatedHours = (Number(t.estimated_days) || 1) * 8;
+
+            let dueDate = t.due_date || null;
+            if (!dueDate && t.estimated_days) {
+                const d = new Date();
+                d.setDate(d.getDate() + Number(t.estimated_days));
+                dueDate = d.toISOString().split('T')[0];
+            }
+
+            let counter = await db.prepare('SELECT last_task_number FROM organization_task_counters WHERE organization_id=?').get(orgId);
+            if (!counter) {
+                await db.prepare('INSERT IGNORE INTO organization_task_counters(organization_id, last_task_number) VALUES(?,0)').run(orgId);
+                counter = { last_task_number: 0 };
+            }
+            const nextTaskNum = Number(counter.last_task_number) + 1;
+            await db.prepare('UPDATE organization_task_counters SET last_task_number=? WHERE organization_id=?').run(nextTaskNum, orgId);
+
+            const result = await db.prepare(
+                "INSERT INTO tasks(organization_id, task_number, project_id, title, description, priority, status, due_date, created_by, assigned_to, estimated_hours) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
+            ).run(
+                orgId, nextTaskNum, project.id, title, description, priority, 'Pending', dueDate, u.id, assignedTo, estimatedHours
+            );
+
+            const newTaskId = result.lastInsertRowid;
+
+            try {
+                await db.prepare('INSERT IGNORE INTO task_assignees(task_id, user_id) VALUES(?,?)').run(newTaskId, assignedTo);
+            } catch (e) {
+                console.error('task_assignees insert error:', e.message);
+            }
+
+            createdCount++;
+        }
+
+        await db.prepare('UPDATE projects SET ai_tasks_generated=1 WHERE id=?').run(project.id);
+
+        try { await activity.log(u.id, 'AI Tasks Generated', `${createdCount} tasks auto-generated for ${project.name}`); } catch (e) {}
+
+        res.json({ success: true, count: createdCount });
+    } catch (err) {
+        console.error('saveAiTasks error:', err);
+        res.status(500).json({ success: false, error: err.message || 'Failed to save tasks' });
+    }
+};
