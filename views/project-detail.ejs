@@ -136,7 +136,7 @@
     <section class="panel" style="margin-top:10px">
         <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h2>Project tasks</h2>
-            <% if (!project.ai_tasks_generated && (user.role === 'admin' || user.role === 'manager')) { %>
+            <% if (!project.ai_tasks_generated && user.role === 'manager') { %>
                 <button type="button" class="btn" id="btn-generate-ai-tasks" data-project-id="<%= project.id %>" style="background:linear-gradient(135deg, #4f46e5, #7c3aed); color:#fff; font-weight:600; font-size:12px; padding:7px 14px; border:none; border-radius:8px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; box-shadow: 0 2px 8px rgba(124,58,237,0.25);">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate Tasks with AI
                 </button>

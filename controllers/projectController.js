@@ -264,8 +264,8 @@ exports.generateAiTasks = async (req, res) => {
         if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
 
         const managerIds = String(project.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
-        if (u.role !== 'admin' && !managerIds.includes(u.id)) {
-            return res.status(403).json({ success: false, error: 'Access denied. Only Admins and assigned Managers can generate tasks.' });
+        if (u.role !== 'manager' || !managerIds.includes(u.id)) {
+            return res.status(403).json({ success: false, error: 'Access denied. Only assigned Managers can generate tasks using AI.' });
         }
 
         if (project.ai_tasks_generated) {
@@ -313,8 +313,8 @@ exports.saveAiTasks = async (req, res) => {
         if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
 
         const managerIds = String(project.manager_id || '').split(',').map(x => Number(x.trim())).filter(Boolean);
-        if (u.role !== 'admin' && !managerIds.includes(u.id)) {
-            return res.status(403).json({ success: false, error: 'Access denied' });
+        if (u.role !== 'manager' || !managerIds.includes(u.id)) {
+            return res.status(403).json({ success: false, error: 'Access denied. Only assigned Managers can save AI tasks.' });
         }
 
         if (project.ai_tasks_generated) {
