@@ -198,17 +198,25 @@ body::after {
 .brand {
     color: #0f172a !important;
     font-weight: 800 !important;
-    padding: 8px 4px !important;
+    padding: 12px 8px 18px 8px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .brand-logo {
-    width: 140px !important;
-    height: auto !important;
+    width: auto !important;
+    max-width: 175px !important;
+    height: 48px !important;
+    max-height: 54px !important;
     object-fit: contain !important;
     display: block !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .sidebar nav a {
