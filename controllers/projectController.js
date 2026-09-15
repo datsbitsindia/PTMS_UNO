@@ -181,10 +181,32 @@ exports.detail = async (req, res) => {
     const projectAssignees = await db.prepare('SELECT pa.*, u.name, u.email FROM project_assignees pa JOIN users u ON u.id=pa.user_id WHERE pa.project_id=?').all(project.id);
 
     const tasks = await db.prepare("SELECT t.*, u.name employee_name FROM tasks t JOIN users u ON u.id=t.assigned_to WHERE t.project_id=? AND t.organization_id=? ORDER BY t.created_at DESC").all(project.id, orgId);
+    const priorityRank = (priorityStr) => {
+        const p = String(priorityStr || '').toLowerCase().trim();
+        if (p === 'critical') return 1;
+        if (p === 'high') return 2;
+        if (p === 'medium') return 3;
+        if (p === 'low') return 4;
+        return 5;
+    };
+
     tasks.sort((a, b) => {
-        const rA = statusRank(a.status);
-        const rB = statusRank(b.status);
+        const sA = String(a.status || '').toLowerCase().trim();
+        const sB = String(b.status || '').toLowerCase().trim();
+        const rA = statusRank(sA);
+        const rB = statusRank(sB);
         if (rA !== rB) return rA - rB;
+
+        if (sA === 'completed' || sA === '2') {
+            const compA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+            const compB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+            if (compA !== compB) return compB - compA;
+        } else {
+            const pA = priorityRank(a.priority);
+            const pB = priorityRank(b.priority);
+            if (pA !== pB) return pA - pB;
+        }
+
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
     const updates = await db.prepare('SELECT x.*, u.name manager_name FROM project_updates x JOIN users u ON u.id=x.manager_id WHERE x.project_id=? ORDER BY x.created_at DESC').all(project.id);

@@ -275,6 +275,38 @@ window.applyCompactFilter = function(bar) {
 
     });
 
+    // Dynamic Reordering of Task Cards in DOM
+    const listContainer = panel.querySelector('.entity-list');
+    if (listContainer && cards.length > 0 && cards[0].classList.contains('task-card')) {
+        const priorityRankMap = { 'critical': 1, 'high': 2, 'medium': 3, 'low': 4 };
+        const getPriorityRank = (c) => {
+            const p = String(c.dataset.priority || '').toLowerCase().trim();
+            return priorityRankMap[p] || 5;
+        };
+        const getCompletedTime = (c) => Number(c.dataset.completedAt || 0);
+        const getCreatedTime = (c) => Number(c.dataset.createdAt || 0);
+
+        const isCompletedFilter = activeKpi.includes('completed') || statusFilter.includes('completed');
+
+        cards.sort((a, b) => {
+            if (isCompletedFilter) {
+                // Completed tab: Sort by completed date & time DESC (latest completed task at top)
+                const compA = getCompletedTime(a);
+                const compB = getCompletedTime(b);
+                if (compA !== compB) return compB - compA;
+                return getCreatedTime(b) - getCreatedTime(a);
+            } else {
+                // Overdue, Pending, In Progress (or general): Priority (Critical -> High -> Medium -> Low)
+                const pA = getPriorityRank(a);
+                const pB = getPriorityRank(b);
+                if (pA !== pB) return pA - pB;
+                return getCreatedTime(b) - getCreatedTime(a);
+            }
+        });
+
+        cards.forEach(card => listContainer.appendChild(card));
+    }
+
     let empty = panel.querySelector('.filter-empty');
     if (!empty) {
         empty = document.createElement('p');
@@ -919,6 +951,10 @@ document.addEventListener('submit', async function(e) {
                         article.dataset.forwarded = t.is_forwarded ? 'true' : 'false';
                         article.dataset.project = (t.project_name || '').toLowerCase();
                         article.dataset.filterGroup = t.filterGroup;
+                        article.dataset.priority = String(t.priority || 'medium').toLowerCase();
+                        article.dataset.completedAt = t.completed_at ? new Date(t.completed_at).getTime() : 0;
+                        article.dataset.createdAt = t.created_at ? new Date(t.created_at).getTime() : 0;
+                        article.dataset.id = t.id;
                         article.dataset.cardLink = `/tasks/${t.id}`;
                         article.style.animation = 'highlightTaskPulse 2.5s ease';
                         article.style.cursor = 'pointer';

@@ -115,11 +115,33 @@ const statusRank = (statusStr) => {
     return 6;
 };
 
+const priorityRank = (priorityStr) => {
+    const p = String(priorityStr || '').toLowerCase().trim();
+    if (p === 'critical') return 1;
+    if (p === 'high') return 2;
+    if (p === 'medium') return 3;
+    if (p === 'low') return 4;
+    return 5;
+};
+
     const tasks = await db.prepare(baseQuery + " WHERE " + filters.join(' AND ') + " ORDER BY t.created_at DESC").all(...params);
     tasks.sort((a, b) => {
-        const rA = statusRank(a.status || a.user_status);
-        const rB = statusRank(b.status || b.user_status);
+        const sA = String(a.status || a.user_status || '').toLowerCase().trim();
+        const sB = String(b.status || b.user_status || '').toLowerCase().trim();
+        const rA = statusRank(sA);
+        const rB = statusRank(sB);
         if (rA !== rB) return rA - rB;
+
+        if (sA === 'completed' || sA === '2') {
+            const compA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+            const compB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+            if (compA !== compB) return compB - compA;
+        } else {
+            const pA = priorityRank(a.priority);
+            const pB = priorityRank(b.priority);
+            if (pA !== pB) return pA - pB;
+        }
+
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
     const employees = await db.prepare("SELECT id,name,designation FROM users WHERE role='employee' AND active=1 AND (organization_id=? OR id IN (SELECT user_id FROM user_organizations WHERE organization_id=?)) ORDER BY name").all(orgId, orgId);

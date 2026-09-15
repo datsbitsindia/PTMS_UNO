@@ -45,6 +45,22 @@ exports.index = async (req, res) => {
 
     const tasks = await db.prepare(`SELECT t.*, p.name project_name, c.name creator_name, CASE WHEN t.due_date < CURDATE() AND t.status NOT IN ('Completed','Cancelled','2','3') THEN 1 ELSE 0 END is_overdue FROM tasks t LEFT JOIN projects p ON p.id=t.project_id LEFT JOIN users c ON c.id=t.created_by ${taskWhere} ORDER BY t.created_at DESC`).all(...taskParams);
     
+    const priorityRankMap = { 'critical': 1, 'high': 2, 'medium': 3, 'low': 4 };
+    tasks.sort((a, b) => {
+        const sA = String(a.status || '').toLowerCase().trim();
+        const sB = String(b.status || '').toLowerCase().trim();
+        if ((sA === 'completed' || sA === '2') && (sB === 'completed' || sB === '2')) {
+            const compA = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+            const compB = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+            if (compA !== compB) return compB - compA;
+        } else {
+            const pA = priorityRankMap[String(a.priority || '').toLowerCase().trim()] || 5;
+            const pB = priorityRankMap[String(b.priority || '').toLowerCase().trim()] || 5;
+            if (pA !== pB) return pA - pB;
+        }
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+    
     const today = new Date().toISOString().slice(0, 10);
     const rawProjects = u.role === 'admin'
         ? await db.prepare(`SELECT p.*,m.name manager_name,(SELECT COUNT(*) FROM tasks t WHERE t.project_id=p.id) task_count,CASE WHEN p.end_date<CURDATE() AND p.status NOT IN (2,3) AND p.status NOT IN ('Completed','Cancelled') THEN 1 ELSE 0 END is_overdue FROM projects p JOIN users m ON m.id=p.manager_id WHERE p.organization_id=? ORDER BY p.created_at DESC`).all(orgId)

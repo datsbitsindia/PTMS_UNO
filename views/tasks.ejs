@@ -214,6 +214,10 @@
                 data-forwarded="<%= t.is_forwarded ? 'true' : 'false' %>"
                 data-project="<%= (t.project_name || '').toLowerCase() %>"
                 data-filter-group="<%= filterGroup %>"
+                data-priority="<%= (t.priority || '').toLowerCase() %>"
+                data-completed-at="<%= t.completed_at ? new Date(t.completed_at).getTime() : 0 %>"
+                data-created-at="<%= t.created_at ? new Date(t.created_at).getTime() : 0 %>"
+                data-id="<%= t.id %>"
             >
 
                 <div class="entity-title">
