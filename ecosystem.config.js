@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "ptms-uno-web",
+      name: "tva-web",
       script: "app.js",
       cwd: "./",
       watch: false,
@@ -11,15 +11,15 @@ module.exports = {
       }
     },
     {
-      name: "ptms-uno-mcp",
+      name: "tva-mcp",
       script: "mcp_service/main.py",
       cwd: "./",
       interpreter: "python",
       watch: false,
       env: {
         PORT: 8001,
-        DB_NAME: "ptms_uno",
-        TABLE_PREFIX: "uno_"
+        DB_NAME: "tva_db",
+        TABLE_PREFIX: "tva_"
       }
     }
   ]

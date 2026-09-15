@@ -3,13 +3,13 @@ const bcrypt = require('bcrypt');
 const config = require('../config');
 let pool;
 
-const prefix = config.tablePrefix || 'uno_';
+const prefix = config.tablePrefix || 'tva_';
 const names = ['organizations', 'organization_task_counters', 'user_organizations', 'users', 'projects', 'project_updates', 'tasks', 'task_assignees', 'task_forward_logs', 'comments', 'attachments', 'notifications', 'activity_logs', 'sessions', 'daily_routines', 'daily_routine_logs', 'notes', 'departments', 'designations', 'project_assignees', 'priorities', 'statuses', 'audit_events'];
 
 function sqlName(sql) {
     let value = sql;
     for (const name of names) {
-        value = value.replace(new RegExp(`(?<!(?:dataevol_|uno_))\\b${name}\\b`, 'gi'), `${prefix}${name}`);
+        value = value.replace(new RegExp(`(?<!(?:dataevol_|uno_|tva_))\\b${name}\\b`, 'gi'), `${prefix}${name}`);
     }
     return value;
 }

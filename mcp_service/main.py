@@ -13,7 +13,7 @@ load_dotenv()
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_NAME", "taskmanager")
+DB_NAME = os.getenv("DB_NAME", "tva_db")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 
 def get_db_connection():
@@ -31,7 +31,7 @@ def get_db_connection():
         return None
 
 # Initialize FastMCP App
-mcp = FastMCP("TaskManager Python Tools")
+mcp = FastMCP("TVA Python Tools")
 
 STATUS_STR_TO_NUM = {'pending': 0, 'in progress': 1, 'completed': 2, 'cancelled': 3}
 STATUS_NUM_TO_STR = {0: 'Pending', 1: 'In Progress', 2: 'Completed', 3: 'Cancelled', 4: 'Planned', 5: 'Generated', 6: 'Missed'}

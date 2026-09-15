@@ -6,7 +6,7 @@ async function clearAllTasks() {
         console.log('Initializing database connection...');
         await init();
 
-        console.log('Deleting all task records from PTMS_UNO database...');
+        console.log('Deleting all task records from TVA database...');
         
         await db.prepare('DELETE FROM task_assignees').run();
         await db.prepare('DELETE FROM task_forward_logs').run();

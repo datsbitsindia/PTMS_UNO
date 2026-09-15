@@ -1,6 +1,6 @@
 {
-  "name": "Task Manager",
-  "short_name": "TaskManager",
+  "name": "TVA Task Manager",
+  "short_name": "TVA",
   "description": "Enterprise Project and Task Management System",
   "start_url": "/",
   "id": "/",

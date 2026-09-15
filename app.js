@@ -118,7 +118,7 @@ async function start() {
         instance.once('listening', () => resolve(instance));
         instance.once('error', reject);
     });
-    console.log(`Task Manager running at http://localhost:${config.port}`);
+    console.log(`TVA running at http://localhost:${config.port}`);
     return {
         webApp,
         server

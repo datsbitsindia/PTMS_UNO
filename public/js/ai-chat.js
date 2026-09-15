@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioChunks = [];
     let isRecording = false;
 
-    // Smart Phonetic Auto-Corrector for Indian Names & PTMS Vocabulary
+    // Smart Phonetic Auto-Corrector for Indian Names & TVA Vocabulary
     function cleanAndCorrectSpeechText(rawText) {
         if (!rawText) return '';
         let cleaned = String(rawText);

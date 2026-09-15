@@ -200,14 +200,14 @@ async function processWithOpenRouter(user, message, existingHistory, toolsDeclar
     const messages = [
         {
             role: "system",
-            content: `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+            content: `You are TVA AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
 
 REAL DATABASE CONTEXT (LIVE INJECTED FROM MYSQL):
 - VALID REAL ACTIVE PROJECTS IN DATABASE: [${projectContextStr || 'AdwaitShakti'}]
 - VALID REAL TEAM MEMBERS IN DATABASE: [${teamContextStr || 'Bhavin, Jemini, Chintan, Chetan'}]
 
 CORE DOMAIN SCOPE & STRICT TASK/PROJECT BOUNDARY:
-- You are 100% EXCLUSIVELY a Project & Task Management Assistant for PTMS (Project & Task Management System).
+- You are 100% EXCLUSIVELY a Project & Task Management Assistant for TVA (Task & Velocity Administration).
 - Your functions include handling Tasks and Projects (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, task & productivity reports, creating projects, and project health reports).
 - STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
 - If the user asks ANY question outside of Task & Project Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
@@ -242,7 +242,7 @@ OPERATIONAL PROJECT & TASK RULES:
    - If the user specifies a non-existing project (e.g. "videos", "DBMS"), respond directly and politely:
      "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [${projectContextStr}]. Kripya inme se kisi active project par task add karein!"
    - When asking clarifying questions for missing task details, NEVER invent a project name like "videos". Ask: "Which project would you like to assign this task to? Active projects: [${projectContextStr}]."
-   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
+   - "TVA" IS THE APPLICATION SYSTEM NAME (Task & Velocity Administration), NOT A PROJECT! NEVER assume "TVA" is a project name.
    - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.
 4. TASK STATUS PERMISSION RULE:
    - ONLY assigned team members (or Admin) can change a task's status or mark it Completed.
@@ -293,7 +293,7 @@ OPERATIONAL PROJECT & TASK RULES:
                         "Authorization": `Bearer ${openrouterKey}`,
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://ptms.datsbits.com",
-                        "X-Title": "PTMS Task Manager"
+                        "X-Title": "TVA Task Manager"
                     },
                     body: JSON.stringify(body)
                 });
@@ -366,14 +366,14 @@ async function processWithGroq(user, message, existingHistory, toolsDeclaration,
     const messages = [
         {
             role: "system",
-            content: `You are PTMS AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+            content: `You are TVA AI Assistant - Dedicated Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
 
 REAL DATABASE CONTEXT (LIVE INJECTED FROM MYSQL):
 - VALID REAL ACTIVE PROJECTS IN DATABASE: [${projectContextStr || 'AdwaitShakti'}]
 - VALID REAL TEAM MEMBERS IN DATABASE: [${teamContextStr || 'Bhavin, Jemini, Chintan, Chetan'}]
 
 CORE DOMAIN SCOPE & STRICT TASK/PROJECT BOUNDARY:
-- You are 100% EXCLUSIVELY a Project & Task Management Assistant for PTMS (Project & Task Management System).
+- You are 100% EXCLUSIVELY a Project & Task Management Assistant for TVA (Task & Velocity Administration).
 - Your functions include handling Tasks and Projects (creating tasks, searching tasks, updating status, reassigning tasks, adding comments, task & productivity reports, creating projects, and project health reports).
 - STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
 
@@ -404,7 +404,7 @@ OPERATIONAL PROJECT & TASK RULES:
    - If the user specifies a non-existing project (e.g. "videos", "DBMS"), respond directly and politely:
      "Aisa koi active project exist nahi karta hai. Currently active projects ye hain: [${projectContextStr}]. Kripya inme se kisi active project par task add karein!"
    - When asking clarifying questions for missing task details, NEVER invent a project name like "videos". Ask: "Which project would you like to assign this task to? Active projects: [${projectContextStr}]."
-   - "PTMS" IS THE APPLICATION SYSTEM NAME (Project & Task Management System), NOT A PROJECT! NEVER assume "PTMS" is a project name.
+   - "TVA" IS THE APPLICATION SYSTEM NAME (Task & Velocity Administration), NOT A PROJECT! NEVER assume "TVA" is a project name.
    - In your final message, ONLY report the exact project name returned by create_new_task tool! NEVER display a fake project name.`
         },
         ...(existingHistory || []).map(m => ({
@@ -572,10 +572,10 @@ async function processUserMessage(user, message, existingHistory = []) {
             try {
                 const client = new GoogleGenAI({ apiKey: currentKey });
 
-                const systemInstruction = `You are PTMS AI Assistant - Dedicated Project & Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
+                const systemInstruction = `You are TVA AI Assistant - Dedicated Project & Task Management Agent for logged-in user: ${user.name} (Role: ${user.role}).
 
 CORE DOMAIN SCOPE & STRICT TASK/PROJECT BOUNDARY:
-- You are 100% EXCLUSIVELY a Project & Task Management Assistant for PTMS (Project & Task Management System).
+- You are 100% EXCLUSIVELY a Project & Task Management Assistant for TVA (Task & Velocity Administration).
 - Your ONLY functions are handling Tasks and Projects (creating/searching tasks, updating status, reassigning tasks, adding comments, task & productivity reports, creating projects, and project health reports).
 - STRICTLY REJECT ALL GENERAL KNOWLEDGE QUESTIONS (e.g. politics, prime ministers, sports, weather, trivia, recipes, general chat).
 - If the user asks ANY question outside of Task & Project Management (e.g. "Who is the Prime Minister of India?", "What is the capital of France?", "Tell me a joke"), respond STRICTLY with:
@@ -695,7 +695,7 @@ async function transcribeAudioWithGroq(audioBuffer, filename = 'speech.webm') {
         formData.append('file', blob, filename);
         formData.append('model', 'whisper-large-v3-turbo');
         formData.append('language', 'en');
-        formData.append('prompt', `PTMS Task Manager dictionary. Team members: ${teamContext}. Projects: ${projectContext}. Always transcribe team names as ${teamContext} and project names as ${projectContext}.`);
+        formData.append('prompt', `TVA Task Manager dictionary. Team members: ${teamContext}. Projects: ${projectContext}. Always transcribe team names as ${teamContext} and project names as ${projectContext}.`);
 
         const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
             method: 'POST',

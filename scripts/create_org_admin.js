@@ -1,5 +1,5 @@
 /**
- * Admin Database Script: Create New Organization & ADMIN User for PTMS_UNO
+ * Admin Database Script: Create New Organization & ADMIN User for TVA
  * 
  * Usage:
  *   node scripts/create_org_admin.js "<Org Name>" "<Admin Name>" "<Admin Email>" "<Password>"

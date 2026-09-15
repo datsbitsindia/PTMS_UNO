@@ -1,6 +1,6 @@
-# 📋 PTMS — Project & Task Management System
+# 📋 TVA — Task & Project Management System
 
-A full-featured, role-based **Project & Task Management System (PTMS)** built as a **Progressive Web App (PWA)** using Node.js, Express, EJS, MySQL, and vanilla JavaScript. Designed for internal company use to manage projects, assign tasks, track daily routines, and monitor employee performance.
+A full-featured, role-based **TVA Task & Project Management System** built as a **Progressive Web App (PWA)** using Node.js, Express, EJS, MySQL, and vanilla JavaScript. Designed for internal company use to manage projects, assign tasks, track daily routines, and monitor employee performance.
 
 ---
 
@@ -153,8 +153,8 @@ TaskManager/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/datsbitsindia/PTMS.git
-cd PTMS
+git clone https://github.com/datsbitsindia/TVA.git
+cd TVA
 
 # 2. Install dependencies
 npm install
@@ -196,7 +196,7 @@ sudo apt update && sudo apt install -y nodejs npm mysql-server nginx
 sudo npm install -g pm2
 
 # Clone & setup
-git clone https://github.com/datsbitsindia/PTMS.git ~/TaskManager
+git clone https://github.com/datsbitsindia/TVA.git ~/TaskManager
 cd ~/TaskManager
 npm install
 cp .env.example .env
@@ -277,4 +277,4 @@ Use **Standard TCP/IP over SSH** connection method:
 
 ## 📄 License
 
-Internal use only — © 2026 Dataevol / PTMS Team. All rights reserved.
+Internal use only — © 2026 Dataevol / TVA Team. All rights reserved.
