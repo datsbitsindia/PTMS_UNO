@@ -198,6 +198,17 @@ body::after {
 .brand {
     color: #0f172a !important;
     font-weight: 800 !important;
+    padding: 8px 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.brand-logo {
+    width: 140px !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
 }
 
 .sidebar nav a {
