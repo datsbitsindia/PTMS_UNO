@@ -198,7 +198,7 @@ body::after {
 .brand {
     color: #0f172a !important;
     font-weight: 800 !important;
-    padding: 12px 8px 18px 8px !important;
+    padding: 10px 4px 14px 4px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -209,9 +209,9 @@ body::after {
 
 .brand-logo {
     width: auto !important;
-    max-width: 175px !important;
-    height: 48px !important;
-    max-height: 54px !important;
+    max-width: 200px !important;
+    height: 75px !important;
+    max-height: 85px !important;
     object-fit: contain !important;
     display: block !important;
     background: transparent !important;
