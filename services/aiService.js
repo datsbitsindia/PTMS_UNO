@@ -292,7 +292,7 @@ OPERATIONAL PROJECT & TASK RULES:
                     headers: {
                         "Authorization": `Bearer ${openrouterKey}`,
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://ptms.datsbits.com",
+                        "HTTP-Referer": "https://tva.datsbits.com",
                         "X-Title": "TVA Task Manager"
                     },
                     body: JSON.stringify(body)
