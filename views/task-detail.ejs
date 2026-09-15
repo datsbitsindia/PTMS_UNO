@@ -387,20 +387,33 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (data.success && data.comment) {
                     textarea.value = '';
                     const box = document.getElementById('chat-messages-box');
-                    const emptyNote = box.querySelector('.empty-chat');
+                    const emptyNote = box?.querySelector('.empty-chat');
                     if (emptyNote) emptyNote.remove();
 
+                    const c = data.comment;
                     const bubble = document.createElement('div');
                     bubble.className = 'chat-bubble outgoing';
+                    bubble.dataset.commentId = c.id;
+
+                    let d = new Date(c.created_at);
+                    if (isNaN(d.getTime())) d = new Date();
+                    const timeStr = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
                     bubble.innerHTML = `
-                        <p class="message-text">${data.comment.message}</p>
+                        <p class="message-text">${c.message}</p>
                         <div class="message-meta">
-                            <time>Just now</time>
+                            <time>${timeStr}</time>
                             <i class="fa-solid fa-check-double read-receipt"></i>
                         </div>
                     `;
                     box.appendChild(bubble);
                     box.scrollTop = box.scrollHeight;
+
+                    const badge = document.querySelector('.badge-count');
+                    if (badge) {
+                        const cur = parseInt(badge.textContent || '0', 10) || 0;
+                        badge.textContent = `${cur + 1} updates`;
+                    }
                 } else {
                     chatForm.submit();
                 }
